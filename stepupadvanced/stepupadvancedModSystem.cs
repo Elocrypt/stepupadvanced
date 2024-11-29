@@ -66,9 +66,10 @@ public class stepupadvancedModSystem : ModSystem
 
     private bool OnIncreaseStepHeight(KeyCombination comb)
     {
+        float increment = stepupadvancedConfig.Current.StepHeightIncrement;
         if (stepupadvancedConfig.Current.StepHeight < MaxStepHeight)
         {
-            stepupadvancedConfig.Current.StepHeight = Math.Min(stepupadvancedConfig.Current.StepHeight + 0.1f, MaxStepHeight);
+            stepupadvancedConfig.Current.StepHeight = Math.Min(stepupadvancedConfig.Current.StepHeight + increment, MaxStepHeight);
             ApplyStepHeightToPlayer();
             capi.ShowChatMessage($"Step height increased to {stepupadvancedConfig.Current.StepHeight:0.0} blocks.");
             stepupadvancedConfig.Save(capi);
@@ -82,9 +83,10 @@ public class stepupadvancedModSystem : ModSystem
 
     private bool OnDecreaseStepHeight(KeyCombination comb)
     {
+        float increment = stepupadvancedConfig.Current.StepHeightIncrement;
         if (stepupadvancedConfig.Current.StepHeight > MinStepHeight)
         {
-            stepupadvancedConfig.Current.StepHeight = Math.Max(stepupadvancedConfig.Current.StepHeight - 0.1f, MinStepHeight);
+            stepupadvancedConfig.Current.StepHeight = Math.Max(stepupadvancedConfig.Current.StepHeight - increment, MinStepHeight);
             ApplyStepHeightToPlayer();
             capi.ShowChatMessage($"Step height decreased to {stepupadvancedConfig.Current.StepHeight:0.0} blocks.");
             stepupadvancedConfig.Save(capi);

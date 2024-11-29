@@ -5,8 +5,10 @@ namespace stepupadvanced;
 public class stepupadvancedConfig
 {
     public bool StepUpEnabled { get; set; } = true;
-    public float StepHeight { get; set; } = 2.2f;
+    public float StepHeight { get; set; } = 1.2f;
     public float DefaultHeight { get; set; } = 0.6f;
+    public float StepHeightIncrement { get; set; } = 0.1f;
+
 
     public static stepupadvancedConfig Current { get; private set; }
 
