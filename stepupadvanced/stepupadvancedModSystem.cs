@@ -2,6 +2,7 @@ using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
 namespace stepupadvanced;
@@ -19,9 +20,32 @@ public class stepupadvancedModSystem : ModSystem
 		stepupadvancedConfig.Load(api);
 		api.World.Logger.Event("Initialized 'StepUp Advanced' mod");
 	}
+    public override void StartServerSide(ICoreServerAPI api)
+    {
+        stepupadvancedServerConfig.Load(api);
+    }
 
-	public override void StartClientSide(ICoreClientAPI api)
+    public override void StartClientSide(ICoreClientAPI api)
 	{
+		base.StartClientSide(api);
+		api.Event.PlayerJoin += player =>
+		{
+			if (stepupadvancedServerConfig.Current != null)
+			{
+				var config = stepupadvancedServerConfig.Current;
+				if (!config.AllowStepUpAdvanced)
+				{
+					api.ShowChatMessage("StepUp Advanced is disabled on this server.");
+					stepUpEnabled = false;
+				}
+				else if (stepupadvancedConfig.Current.StepHeight > config.MaxStepHeight)
+				{
+					stepupadvancedConfig.Current.StepHeight = config.MaxStepHeight;
+					ApplyStepHeightToPlayer();
+					api.ShowChatMessage($"Step height clamped to server's maximum of {config.MaxStepHeight} blocks.");
+				}
+			}
+		};
 		capi = api;
 		api.Input.RegisterHotKey("increaseStepHeight", "Increase Step Height", GlKeys.PageUp, HotkeyType.GUIOrOtherControls);
         api.Input.RegisterHotKey("decreaseStepHeight", "Decrease Step Height", GlKeys.PageDown, HotkeyType.GUIOrOtherControls);
@@ -83,7 +107,7 @@ public class stepupadvancedModSystem : ModSystem
 
     private bool OnDecreaseStepHeight(KeyCombination comb)
     {
-        float increment = stepupadvancedConfig.Current.StepHeightIncrement;
+		float increment = stepupadvancedConfig.Current.StepHeightIncrement;
         if (stepupadvancedConfig.Current.StepHeight > MinStepHeight)
         {
             stepupadvancedConfig.Current.StepHeight = Math.Max(stepupadvancedConfig.Current.StepHeight - increment, MinStepHeight);
