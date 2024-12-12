@@ -16,7 +16,7 @@ public class stepupadvancedConfig
         string configPath = api.GetOrCreateDataPath("ModConfig");
         string fullFilePath = $"{configPath}/stepupadvancedConfig.json";
         var loadedConfig = api.LoadModConfig<stepupadvancedConfig>("stepupadvancedConfig.json");
-        if (loadedConfig != null )
+        if (loadedConfig != null)
         {
             Current = loadedConfig;
             api.World.Logger.Event($"Config Loaded: StepHeight = {Current.StepHeight}");
@@ -38,10 +38,11 @@ public class stepupadvancedConfig
         api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
     }
 }
+
 public class stepupadvancedServerConfig
 {
     public bool AllowStepUpAdvanced { get; set; } = true;
-    public float MaxStepHeight { get; set; } = 1.0f;
+    public float MaxStepHeight { get; set; } = 2.0f;
 
     public static stepupadvancedServerConfig Current { get; private set; }
 
