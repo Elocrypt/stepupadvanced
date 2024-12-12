@@ -18,6 +18,6 @@ StepUp Advanced provides a balance between automation and control, giving player
 ### Credits: [CopyGirl][CG] => [StepUp][SU]
 [CG]: https://mods.vintagestory.at/list/mod?sortby=lastreleased&sortdir=desc&text=&side=&userid=41&mv=
 ### Note:
-This mod includes a hardcoded maximum step height of 3 blocks, which may be controversial for some users. I would love to hear your feedback on whether this limit feels appropriate or if a lower default, such as 2 blocks. The reason for it being 3 blocks currently, is to give a decent customizable range, server-owners should be able to set the max step height for users through the server-side config. This mod is not intended as a cheat, but a utility.
+This mod includes a hardcoded maximum step height of 3 blocks, which may be controversial for some users. I would love to hear your feedback on whether this limit feels appropriate or if a lower default, such as 2 blocks woudld be more fitting. The reason for it being 3 blocks currently, is to give a decent customizable range. Although, intentionally, this mod is required on a server for it to work on a server so that it doesn't act as a 'cheat'. Server-owners should be able to set the max step height for users through the server-side config.
 
 Additionally, if you have any feature requests or ideas for enhancements, feel free to share them with me! Your input will help shape the future of StepUp Advanced and ensure it fits the needs of the community.
