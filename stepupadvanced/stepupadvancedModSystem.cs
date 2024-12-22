@@ -1,7 +1,6 @@
 using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
 namespace stepupadvanced;
@@ -11,10 +10,8 @@ public class stepupadvancedModSystem : ModSystem
     private bool stepUpEnabled = true;
     private ICoreClientAPI capi;
     private const float MinStepHeight = 0.5f;
-    private const float AbsoluteMaxStepHeight = 3.0f;
-
-    private IServerNetworkChannel serverChannel;
-    private IClientNetworkChannel clientChannel;
+    private const float AbsoluteMaxStepHeight = 2.0f;
+    private float currentStepHeight = 1.2f;
 
     public override void Start(ICoreAPI api)
     {
@@ -23,83 +20,37 @@ public class stepupadvancedModSystem : ModSystem
         api.World.Logger.Event("Initialized 'StepUp Advanced' mod");
     }
 
-    public override void StartServerSide(ICoreServerAPI sapi)
-    {
-        stepupadvancedServerConfig.Load(sapi);
-
-        serverChannel = sapi.Network.RegisterChannel("stepupadvanced")
-            .RegisterMessageType<stepupadvancedServerConfig>()
-            .SetMessageHandler<stepupadvancedServerConfig>((player, config) =>
-            {
-                sapi.World.Logger.Event("Received StepUp config from server: {0}", config);
-            });
-
-        sapi.Event.PlayerNowPlaying += player =>
-        {
-            var serverConfig = stepupadvancedServerConfig.Current;
-            serverChannel.SendPacket(serverConfig, player);
-        };
-    }
-
     public override void StartClientSide(ICoreClientAPI api)
     {
         base.StartClientSide(api);
         capi = api;
 
-        clientChannel = capi.Network.RegisterChannel("stepupadvanced")
-            .RegisterMessageType<stepupadvancedServerConfig>()
-            .SetMessageHandler<stepupadvancedServerConfig>(config =>
-            {
-                ApplyServerConfig(config);
-                capi.ShowChatMessage("Server config applied.");
-            });
-
-        capi.Event.RegisterGameTickListener(ValidateClientConfig, 5000);
+        stepupadvancedConfig.Load(api);
 
         api.Input.RegisterHotKey("increaseStepHeight", "Increase Step Height", GlKeys.PageUp, HotkeyType.GUIOrOtherControls);
         api.Input.RegisterHotKey("decreaseStepHeight", "Decrease Step Height", GlKeys.PageDown, HotkeyType.GUIOrOtherControls);
+        api.Input.RegisterHotKey("toggleStepUp", "Toggle Step Up", GlKeys.Insert, HotkeyType.GUIOrOtherControls);
+        api.Input.RegisterHotKey("reloadConfig", "Reload Config", GlKeys.Home, HotkeyType.GUIOrOtherControls);
+
         api.Input.SetHotKeyHandler("increaseStepHeight", OnIncreaseStepHeight);
         api.Input.SetHotKeyHandler("decreaseStepHeight", OnDecreaseStepHeight);
-    }
+        api.Input.SetHotKeyHandler("toggleStepUp", OnToggleStepUp);
+        api.Input.SetHotKeyHandler("reloadConfig", OnReloadConfig);
 
-    private void ValidateClientConfig(float dt)
-    {
-        var clientConfig = stepupadvancedConfig.Current;
-        var serverConfig = stepupadvancedServerConfig.Current;
-
-        if (!serverConfig.AllowStepUpAdvanced)
+        capi.Event.RegisterGameTickListener(dt =>
         {
-            stepUpEnabled = false;
-            capi.ShowChatMessage("StepUp Advanced is disabled by the server.");
-        }
-
-        clientConfig.StepHeight = Math.Min(clientConfig.StepHeight, serverConfig.MaxStepHeight);
-    }
-
-    private void ApplyServerConfig(stepupadvancedServerConfig serverConfig)
-    {
-        if (!serverConfig.AllowStepUpAdvanced)
-        {
-            stepUpEnabled = false;
-            capi.ShowChatMessage("StepUp Advanced is disabled by the server.");
-        }
-        else
-        {
-            stepupadvancedConfig.Current.StepHeight = Math.Min(stepupadvancedConfig.Current.StepHeight, serverConfig.MaxStepHeight);
             ApplyStepHeightToPlayer();
-        }
+        }, 5000);
     }
 
     private bool OnIncreaseStepHeight(KeyCombination comb)
     {
-        var config = stepupadvancedConfig.Current;
-        if (config.StepHeight < AbsoluteMaxStepHeight)
+        if (currentStepHeight < AbsoluteMaxStepHeight)
         {
-            config.StepHeight += config.StepHeightIncrement;
-            config.StepHeight = Math.Min(config.StepHeight, AbsoluteMaxStepHeight);
+            currentStepHeight += stepupadvancedConfig.Current.StepHeightIncrement;
+            currentStepHeight = Math.Min(currentStepHeight, AbsoluteMaxStepHeight);
             ApplyStepHeightToPlayer();
-            capi.ShowChatMessage($"Step height increased to {config.StepHeight:0.0} blocks.");
-            stepupadvancedConfig.Save(capi);
+            capi.ShowChatMessage($"Step height increased to {currentStepHeight:0.0} blocks.");
             return true;
         }
 
@@ -109,14 +60,12 @@ public class stepupadvancedModSystem : ModSystem
 
     private bool OnDecreaseStepHeight(KeyCombination comb)
     {
-        var config = stepupadvancedConfig.Current;
-        if (config.StepHeight > MinStepHeight)
+        if (currentStepHeight > MinStepHeight)
         {
-            config.StepHeight -= config.StepHeightIncrement;
-            config.StepHeight = Math.Max(config.StepHeight, MinStepHeight);
+            currentStepHeight -= stepupadvancedConfig.Current.StepHeightIncrement;
+            currentStepHeight = Math.Max(currentStepHeight, MinStepHeight);
             ApplyStepHeightToPlayer();
-            capi.ShowChatMessage($"Step height decreased to {config.StepHeight:0.0} blocks.");
-            stepupadvancedConfig.Save(capi);
+            capi.ShowChatMessage($"Step height decreased to {currentStepHeight:0.0} blocks.");
             return true;
         }
 
@@ -124,9 +73,27 @@ public class stepupadvancedModSystem : ModSystem
         return false;
     }
 
+    private bool OnToggleStepUp(KeyCombination comb)
+    {
+        stepUpEnabled = !stepUpEnabled;
+        ApplyStepHeightToPlayer();
+        string message = stepUpEnabled ? "StepUp enabled." : "StepUp disabled.";
+        capi.ShowChatMessage(message);
+        return true;
+    }
+
+    private bool OnReloadConfig(KeyCombination comb)
+    {
+        ApplyStepHeightToPlayer();
+        capi.ShowChatMessage("Configuration reloaded.");
+        return true;
+    }
+
     private void ApplyStepHeightToPlayer()
     {
         var player = capi.World.Player;
-        player.Entity.GetBehavior<EntityBehaviorControlledPhysics>().StepHeight = stepupadvancedConfig.Current.StepHeight;
+        float stepHeight = stepUpEnabled ? currentStepHeight : stepupadvancedConfig.Current.DefaultHeight;
+        stepHeight = Math.Min(stepHeight, AbsoluteMaxStepHeight);
+        player.Entity.GetBehavior<EntityBehaviorControlledPhysics>().StepHeight = stepHeight;
     }
 }
