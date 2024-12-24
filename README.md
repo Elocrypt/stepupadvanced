@@ -11,7 +11,6 @@ StepUp Advanced takes the convenience of the original [StepUp][SU] mod for [*Vin
 - **Real-Time Adjustments:** Increase or decrease step height on the fly using customizable hotkeys (Default: PageUp and PageDown).
 - **Reloadable Configuration:** Easily reload your settings mid-game with a hotkey, without restarting. (Default: Home)
 - **Immersive Feedback:** Chat notifications and logs keep you updated on changes to your configuration and usage.
-- **(Needs Testing)Server-Side Controls:** Server owners can define whether StepUp Advanced is allowed and set a maximum step height to maintain fair gameplay. Client settings will be overridden to adhere to server rules. (Default: Enabled, Max Height 1.0 block)
 
 ## Controls - Keybinds
 - **Insert** - Toggle On/Off
