@@ -7,8 +7,9 @@ StepUp Advanced takes the convenience of the original [StepUp][SU] mod for [*Vin
 
 ## Features
 - **Configurable Step Height:** Adjust your step height between 0.5 and 2 blocks, making it perfect for varied terrain and playstyles.
+- **Configurable Step Speed:** Adjust your step up speed between 0.5 and 2 speed, allowing a quicker traversal of terrain.
 - **Dynamic Toggle:** Enable or disable StepUp functionality in real time with a hotkey. (Default: Insert)
-- **Real-Time Adjustments:** Increase or decrease step height on the fly using customizable hotkeys (Default: PageUp and PageDown).
+- **Real-Time Adjustments:** Increase or decrease step height and step speed on the fly using customizable hotkeys ([Step Height] Default: PageUp and PageDown & [Step Speed] Default: ArrowUp and ArrowDown).
 - **Reloadable Configuration:** Easily reload your settings mid-game with a hotkey, without restarting. (Default: Home)
 - **Immersive Feedback:** Chat notifications and logs keep you updated on changes to your configuration and usage.
 
@@ -17,6 +18,8 @@ StepUp Advanced takes the convenience of the original [StepUp][SU] mod for [*Vin
 - **Home** - Reload Config
 - **PageUp** - Increase Step Height
 - **PageDown** - Decrease Step Height
+- **UpArrow** - Increase Step Speed
+- **DownArrow** - Increase Step Speed
 
 StepUp Advanced provides a balance between automation and control, giving players the tools to adapt their gameplay effortlessly. Whether you're crafting, exploring, or in the heat of survival, this mod ensures you never lose momentum.
 
