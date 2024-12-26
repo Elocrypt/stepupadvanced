@@ -1,6 +1,9 @@
+using HarmonyLib;
 using System;
+using System.Reflection;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
 namespace stepupadvanced;
@@ -13,6 +16,11 @@ public class StepUpAdvancedModSystem : ModSystem
     public const float MinStepHeightIncrement = 0.1f;
     public const float AbsoluteMaxStepHeight = 2.0f;
     public const float DefaultStepHeight = 0.6f;
+    public const float MinElevateFactor = 0.5f;
+    public const float MinElevateFactorIncrement = 0.1f;
+    public const float AbsoluteMaxElevateFactor = 2.0f;
+    public const float DefaultElevateFactor = 0.7f;
+    private float currentElevateFactor;
     private float currentStepHeight;
     private bool hasShownMaxMessage = false;
     private bool hasShownMinMessage = false;
@@ -23,6 +31,18 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         base.Start(api);
         StepUpAdvancedConfig.Load(api);
+        Harmony.DEBUG = true;
+        var harmony = new Harmony("stepupadvanced.mod");
+        try
+        {
+            harmony.PatchAll();
+            api.World.Logger.Event("[StepUp Advanced] Harmony patches applied successfully.");
+        }
+        catch (Exception ex)
+        {
+            api.World.Logger.Error("[StepUp Advanced] Failed to apply Harmony patches: " + ex.Message);
+            throw; 
+        }
         api.World.Logger.Event("Initialized 'StepUp Advanced' mod");
     }
 
@@ -32,31 +52,44 @@ public class StepUpAdvancedModSystem : ModSystem
         capi = api;
 
         StepUpAdvancedConfig.Load(api);
-        currentStepHeight = StepUpAdvancedConfig.Current?.StepHeight ?? 1.2f;
+        currentStepHeight = StepUpAdvancedConfig.Current?.StepHeight ?? DefaultStepHeight;
+        currentElevateFactor = StepUpAdvancedConfig.Current?.StepSpeed ?? DefaultElevateFactor;
         stepUpEnabled = StepUpAdvancedConfig.Current?.StepUpEnabled ?? true;
 
-        api.Input.RegisterHotKey("increaseStepHeight", "Increase Step Height", GlKeys.PageUp, HotkeyType.GUIOrOtherControls);
-        api.Input.RegisterHotKey("decreaseStepHeight", "Decrease Step Height", GlKeys.PageDown, HotkeyType.GUIOrOtherControls);
-        api.Input.RegisterHotKey("toggleStepUp", "Toggle Step Up", GlKeys.Insert, HotkeyType.GUIOrOtherControls);
-        api.Input.RegisterHotKey("reloadConfig", "Reload Config", GlKeys.Home, HotkeyType.GUIOrOtherControls);
+        RegisterHotkeys();
+        
+        capi.Event.RegisterGameTickListener(dt => ApplyStepHeightToPlayer(), 1000);
+        capi.Event.RegisterGameTickListener(ApplyElevateFactorToPlayer, 16);
 
-        api.Input.SetHotKeyHandler("increaseStepHeight", OnIncreaseStepHeight);
-        api.Input.SetHotKeyHandler("decreaseStepHeight", OnDecreaseStepHeight);
-        api.Input.SetHotKeyHandler("toggleStepUp", OnToggleStepUp);
-        api.Input.SetHotKeyHandler("reloadConfig", OnReloadConfig);
+    }
 
-        api.Event.KeyUp += (KeyEvent ke) =>
+    private void RegisterHotkeys()
+    {
+        capi.Input.RegisterHotKey("increaseStepHeight", "Increase Step Height", GlKeys.PageUp, HotkeyType.GUIOrOtherControls, false, false, false);
+        capi.Input.RegisterHotKey("decreaseStepHeight", "Decrease Step Height", GlKeys.PageDown, HotkeyType.GUIOrOtherControls, false, false, false);
+        capi.Input.RegisterHotKey("increaseStepSpeed", "Increase Step Speed", GlKeys.Up, HotkeyType.GUIOrOtherControls, false, false, false);
+        capi.Input.RegisterHotKey("decreaseStepSpeed", "Decrease Step Speed", GlKeys.Down, HotkeyType.GUIOrOtherControls, false, false, false);
+        capi.Input.RegisterHotKey("toggleStepUp", "Toggle Step Up", GlKeys.Insert, HotkeyType.GUIOrOtherControls);
+        capi.Input.RegisterHotKey("reloadConfig", "Reload Config", GlKeys.Home, HotkeyType.GUIOrOtherControls);
+
+        capi.Input.SetHotKeyHandler("increaseStepHeight", OnIncreaseStepHeight);
+        capi.Input.SetHotKeyHandler("decreaseStepHeight", OnDecreaseStepHeight);
+        capi.Input.SetHotKeyHandler("increaseStepSpeed", OnIncreaseElevateFactor);
+        capi.Input.SetHotKeyHandler("decreaseStepSpeed", OnDecreaseElevateFactor);
+        capi.Input.SetHotKeyHandler("toggleStepUp", OnToggleStepUp);
+        capi.Input.SetHotKeyHandler("reloadConfig", OnReloadConfig);
+
+        capi.Event.KeyUp += (KeyEvent ke) =>
         {
-            if (ke.KeyCode == api.Input.HotKeys["toggleStepUp"].CurrentMapping.KeyCode)
+            if (ke.KeyCode == capi.Input.HotKeys["toggleStepUp"].CurrentMapping.KeyCode)
             {
                 toggleStepUpKeyHeld = false;
             }
-            if (ke.KeyCode == api.Input.HotKeys["reloadConfig"].CurrentMapping.KeyCode)
+            if (ke.KeyCode == capi.Input.HotKeys["reloadConfig"].CurrentMapping.KeyCode)
             {
                 reloadConfigKeyHeld = false;
             }
         };
-        capi.Event.RegisterGameTickListener(dt => ApplyStepHeightToPlayer(), 1000);
     }
 
     private bool OnIncreaseStepHeight(KeyCombination comb)
@@ -109,6 +142,56 @@ public class StepUpAdvancedModSystem : ModSystem
         return true;
     }
 
+    private bool OnIncreaseElevateFactor(KeyCombination comb)
+    {
+        if (Math.Abs(currentElevateFactor - AbsoluteMaxElevateFactor) < 0.01f)
+        {
+            if (!hasShownMaxMessage)
+            {
+                capi.ShowChatMessage($"Step speed cannot exceed {AbsoluteMaxElevateFactor:0.0} blocks.");
+                hasShownMaxMessage = true;
+            }
+            return false;
+        }
+        hasShownMaxMessage = false;
+        float previousElevateFactor = currentElevateFactor;
+        currentElevateFactor += Math.Max(StepUpAdvancedConfig.Current.StepSpeedIncrement, 0.01f);
+        currentElevateFactor = Math.Min(currentElevateFactor, AbsoluteMaxElevateFactor);
+        if (currentElevateFactor > previousElevateFactor)
+        {
+            StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
+            StepUpAdvancedConfig.Save(capi);
+            ApplyElevateFactorToPlayer(16);
+            capi.ShowChatMessage($"Step speed increased to {currentElevateFactor:0.0} blocks.");
+        }
+        return true;
+    }
+
+    private bool OnDecreaseElevateFactor(KeyCombination comb)
+    {
+        if (Math.Abs(currentElevateFactor - MinElevateFactor) < 0.01f)
+        {
+            if (!hasShownMinMessage)
+            {
+                capi.ShowChatMessage($"Step speed cannot be less than {MinElevateFactor} blocks.");
+                hasShownMinMessage = true;
+            }
+            return false;
+        }
+        hasShownMinMessage = false;
+        float previousElevateFactor = currentElevateFactor;
+        currentElevateFactor -= Math.Max(StepUpAdvancedConfig.Current.StepSpeedIncrement, 0.01f);
+        currentElevateFactor = Math.Max(currentElevateFactor, MinElevateFactor);
+        if (currentElevateFactor < previousElevateFactor)
+        {
+            StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
+            StepUpAdvancedConfig.Save(capi);
+            ApplyElevateFactorToPlayer(16);
+            capi.ShowChatMessage($"Step speed decreased to {currentElevateFactor:0.0} blocks.");
+        }
+        return true;
+    }
+
     private bool OnToggleStepUp(KeyCombination comb)
     {
         if (toggleStepUpKeyHeld) return false;
@@ -117,6 +200,7 @@ public class StepUpAdvancedModSystem : ModSystem
         StepUpAdvancedConfig.Current.StepUpEnabled = stepUpEnabled;
         StepUpAdvancedConfig.Save(capi);
         ApplyStepHeightToPlayer();
+        ApplyElevateFactorToPlayer(16);
         string message = stepUpEnabled ? "StepUp enabled." : "StepUp disabled.";
         capi.ShowChatMessage(message);
         return true;
@@ -128,8 +212,10 @@ public class StepUpAdvancedModSystem : ModSystem
         reloadConfigKeyHeld = true;
         StepUpAdvancedConfig.Load(capi);
         currentStepHeight = StepUpAdvancedConfig.Current?.StepHeight ?? currentStepHeight;
+        currentElevateFactor = StepUpAdvancedConfig.Current?.StepSpeed ?? currentElevateFactor;
         stepUpEnabled = StepUpAdvancedConfig.Current?.StepUpEnabled ?? stepUpEnabled;
         ApplyStepHeightToPlayer();
+        ApplyElevateFactorToPlayer(16);
         capi.ShowChatMessage("Configuration reloaded.");
         return true;
     }
@@ -166,5 +252,35 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             capi.ShowChatMessage($"StepUp Advanced: Failed to set step height. Error: {ex.Message}");
         }
+    }
+
+    private void ApplyElevateFactorToPlayer(float dt)
+    {
+        var player = capi.World?.Player;
+        if (player == null || player.Entity == null)
+        {
+            capi.World.Logger.Warning("Player object is null. Cannot apply elevate factor.");
+            return;
+        }
+        var physicsBehavior = player.Entity.GetBehavior<EntityBehaviorControlledPhysics>();
+        if (physicsBehavior == null)
+        {
+            capi.World.Logger.Warning("Physics behavior is missing on player entity. Cannot apply elevate factor.");
+            return;
+        }
+        var type = physicsBehavior.GetType();
+        var elevateFactorField = type.GetField("elevateFactor", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (elevateFactorField == null)
+        {
+            capi.World.Logger.Warning("[StepUp Advanced] elevateFactor field not found.");
+            return;
+        }
+        double customElevateFactor = stepUpEnabled
+            ? StepUpAdvancedConfig.Current.StepSpeed
+            : 0.05;
+
+        elevateFactorField.SetValue(physicsBehavior, customElevateFactor);
+        double currentElevateFactor = (double)elevateFactorField.GetValue(physicsBehavior);
+        capi.World.Logger.Event($"[Debug] Applied elevateFactor: {customElevateFactor}");
     }
 }

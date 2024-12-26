@@ -1,5 +1,4 @@
 ﻿using Vintagestory.API.Common;
-using Vintagestory.API.Server;
 
 namespace stepupadvanced;
 
@@ -7,9 +6,11 @@ public class StepUpAdvancedConfig
 {
     public bool StepUpEnabled { get; set; } = true;
     public float StepHeight { get; set; } = 1.2f;
+    public float StepSpeed { get; set; } = 1.3f;
     public float DefaultHeight { get; set; } = 0.6f;
+    public float DefaultSpeed { get; set; } = 0.7f;
     public float StepHeightIncrement { get; set; } = 0.1f;
-
+    public float StepSpeedIncrement { get; set; } = 0.1f;
     public static StepUpAdvancedConfig Current { get; private set; }
 
     public static void Load(ICoreAPI api)
@@ -36,6 +37,22 @@ public class StepUpAdvancedConfig
                 Current.DefaultHeight = StepUpAdvancedModSystem.DefaultStepHeight;
             }
             api.World.Logger.Event($"Config Loaded: StepHeight = {Current.StepHeight}");
+            if (Current.StepSpeed > StepUpAdvancedModSystem.AbsoluteMaxElevateFactor)
+            {
+                api.World.Logger.Warning($"StepSpeed in config exceeds maximum allowed value ({StepUpAdvancedModSystem.AbsoluteMaxElevateFactor}). Adjusting to maximum.");
+                Current.StepSpeed = StepUpAdvancedModSystem.AbsoluteMaxElevateFactor;
+            }
+            if (Current.StepSpeedIncrement < StepUpAdvancedModSystem.MinElevateFactorIncrement)
+            {
+                api.World.Logger.Warning($"StepSpeedIncrement in config is below minimum allowed value ({StepUpAdvancedModSystem.MinElevateFactorIncrement}). Adjusting to minimum.");
+                Current.StepSpeedIncrement = StepUpAdvancedModSystem.MinElevateFactorIncrement;
+            }
+            if (Current.DefaultSpeed < StepUpAdvancedModSystem.MinElevateFactor || Current.DefaultSpeed > StepUpAdvancedModSystem.AbsoluteMaxElevateFactor)
+            {
+                api.World.Logger.Warning($"DefaultSpeed in config is out of bounds (allowed range: {StepUpAdvancedModSystem.MinElevateFactor} - {StepUpAdvancedModSystem.AbsoluteMaxElevateFactor}). Resetting to default value ({StepUpAdvancedModSystem.DefaultElevateFactor}).");
+                Current.DefaultSpeed = StepUpAdvancedModSystem.DefaultElevateFactor;
+            }
+            api.World.Logger.Event($"Config Loaded: StepSpeed = {Current.StepSpeed}");
         }
         else
         {
