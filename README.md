@@ -6,7 +6,7 @@ StepUp Advanced takes the convenience of the original [StepUp][SU] mod for [*Vin
 [VS]: https://www.vintagestory.at/
 
 ## Features
-- **Configurable Step Height:** Adjust your step height between 0.5 and 2 blocks, making it perfect for varied terrain and playstyles.
+- **Configurable Step Height:** Adjust your step height between 0.2 and 2 blocks, making it perfect for varied terrain and playstyles.
 - **Configurable Step Speed:** Adjust your step up speed between 0.5 and 2 speed, allowing a quicker traversal of terrain.
 - **Configurable Blacklist:** Add or remove block codes to the block blacklist, preventing the step-up function for blocks listed.
 - **Dynamic Toggle:** Enable or disable StepUp functionality in real time with a hotkey. (Default: Insert)
