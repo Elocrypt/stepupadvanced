@@ -47,7 +47,7 @@ public class StepUpAdvancedModSystem : ModSystem
 	{
 		base.Start(api);
 		StepUpAdvancedConfig.Load(api);
-		Harmony.DEBUG = true;
+		Harmony.DEBUG = false;
 		Harmony harmony = new Harmony("stepupadvanced.mod");
 		try
 		{
