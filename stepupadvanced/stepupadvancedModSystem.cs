@@ -15,6 +15,28 @@ namespace stepupadvanced;
 
 public class StepUpAdvancedModSystem : ModSystem
 {
+    private DateTime lastSaveTime = DateTime.MinValue;
+
+    private void SafeSaveConfig(ICoreAPI api)
+    {
+        if ((DateTime.Now - lastSaveTime).TotalMilliseconds < 500) return;
+        lastSaveTime = DateTime.Now;
+
+        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem modSystem)
+        {
+            modSystem.SuppressWatcher(true);
+        }
+
+        string configFile = "StepUpAdvancedConfig.json";
+        api.StoreModConfig(StepUpAdvancedConfig.Current, configFile);
+        api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
+
+        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem ms)
+        {
+            ms.SuppressWatcher(false);
+        }
+    }
+
     private bool stepUpEnabled = true;
 
     private FileSystemWatcher configWatcher;
@@ -99,6 +121,7 @@ public class StepUpAdvancedModSystem : ModSystem
         api.Event.PlayerNowPlaying += OnPlayerJoin;
 
         SetupConfigWatcher();
+        RegisterServerCommands();
     }
 
     public override void StartClientSide(ICoreClientAPI api)
@@ -109,6 +132,7 @@ public class StepUpAdvancedModSystem : ModSystem
                 .RegisterMessageType<StepUpAdvancedConfig>()
                 .SetMessageHandler<StepUpAdvancedConfig>(OnReceiveServerConfig);
         StepUpAdvancedConfig.Load(api);
+        BlockBlacklistConfig.Load(api);
         currentStepHeight = StepUpAdvancedConfig.Current?.StepHeight ?? 0.2f;
         currentElevateFactor = StepUpAdvancedConfig.Current?.StepSpeed ?? 0.7f;
         stepUpEnabled = StepUpAdvancedConfig.Current?.StepUpEnabled ?? true;
@@ -138,67 +162,75 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         if (capi == null) return;
 
-        try
-        {
-            // Determine if this is a real multiplayer client (not host, not SP)
-            bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
+        bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
 
-            // Set enforcement BEFORE using the config
-            if (isRemoteMultiplayerClient)
+        if (!isRemoteMultiplayerClient)
+        {
+            config.ServerEnforceSettings = false;
+        }
+
+        capi.Event.EnqueueMainThreadTask(() =>
+        {
+            StepUpAdvancedConfig.UpdateConfig(config);
+
+            if (!isRemoteMultiplayerClient)
             {
-                config.ServerEnforceSettings = true;
+                StepUpAdvancedConfig.Current.ServerEnforceSettings = false;
             }
 
-            capi.Event.EnqueueMainThreadTask(() =>
+            SafeSaveConfig(capi);
+
+            StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
+            StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
+
+            if (!IsEnforced && hasShownServerEnforcedNotice)
             {
-                // Apply the updated config to memory
-                StepUpAdvancedConfig.UpdateConfig(config);
+                capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings deactivated. Your local settings are now enabled.");
+                hasShownServerEnforcedNotice = false;
+            }
 
-                // Reassert server enforcement after assignment
-                if (isRemoteMultiplayerClient)
-                {
-                    StepUpAdvancedConfig.Current.ServerEnforceSettings = true;
-                }
+            if (IsEnforced && !hasShownServerEnforcedNotice)
+            {
+                capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings active. Your local settings are disabled.");
+                hasShownServerEnforcedNotice = true;
+            }
 
-                StepUpAdvancedConfig.Save(capi);
+            ApplyStepHeightToPlayer();
+            ApplyElevateFactorToPlayer(16f);
 
-                StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
-                StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
-
-                // Notify user only if something changed
-                if (!IsEnforced && hasShownServerEnforcedNotice)
-                {
-                    capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings deactivated. Your local settings are now enabled.");
-                    hasShownServerEnforcedNotice = false;
-                }
-
-                if (IsEnforced && !hasShownServerEnforcedNotice)
-                {
-                    capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings active. Your local settings are disabled.");
-                    hasShownServerEnforcedNotice = true;
-                }
-
-                ApplyStepHeightToPlayer();
-                ApplyElevateFactorToPlayer(16f);
-
-            }, "ApplyStepUpServerConfig");
-        }
-        catch (Exception ex)
-        {
-            capi.ShowChatMessage("[StepUp Advanced] ERROR applying server config. See client-main.txt.");
-            capi.Logger.Error("[StepUp Advanced] Failed to apply server config: " + ex);
-        }
+        }, "ApplyStepUpServerConfig");
     }
+
     private void RegisterCommands()
     {
-        capi.ChatCommands.Create("sua").WithDescription("Manage the block blacklist").RequiresPrivilege("chat")
+        capi.ChatCommands.Create("sua").WithDescription("Manage the client block blacklist").RequiresPrivilege("chat")
             .BeginSubCommand("add")
-            .WithDescription("Adds the targeted block to the step-up blacklist.")
+            .WithDescription("Adds the targeted block to the client step-up blacklist.")
             .HandleWith(AddToBlacklist)
             .EndSubCommand()
             .BeginSubCommand("remove")
-            .WithDescription("Removes the targeted block from the step-up blacklist.")
+            .WithDescription("Removes the targeted block from the client step-up blacklist.")
             .HandleWith(RemoveFromBlacklist)
+            .EndSubCommand()
+            .BeginSubCommand("list")
+            .WithDescription("Lists all blacklisted blocks.")
+            .HandleWith(ListBlacklist)
+            .EndSubCommand();
+    }
+    private void RegisterServerCommands()
+    {
+        sapi.ChatCommands.Create("sua").WithDescription("Manage the server block blacklist").RequiresPrivilege("controlserver")
+            .BeginSubCommand("add")
+            .WithDescription("Adds the targeted block to the step-up server blacklist.")
+            .HandleWith(AddToServerBlacklist)
+            .EndSubCommand()
+            .BeginSubCommand("remove")
+            .WithDescription("Removes the targeted block from the step-up server blacklist.")
+            .HandleWith(RemoveFromServerBlacklist)
+            .EndSubCommand()
+            .BeginSubCommand("reload")
+            .WithDescription("Reloads the server config and syncs to all clients.")
+            .HandleWith(ReloadServerConfig)
             .EndSubCommand();
     }
     private IClientPlayer ValidatePlayer(TextCommandCallingArgs args, out int groupId)
@@ -225,22 +257,22 @@ public class StepUpAdvancedModSystem : ModSystem
             return TextCommandResult.Error("[StepUp Advanced] No block targeted.");
         }
         string blockCode = blockSel.Block.Code.ToString();
-        if (!StepUpAdvancedConfig.Current.BlockBlacklist.Contains(blockCode))
+        if (!BlockBlacklistConfig.Current.BlockCodes.Remove(blockCode))
         {
-            StepUpAdvancedConfig.Current.BlockBlacklist.Add(blockCode);
-            StepUpAdvancedConfig.Save(capi);
-            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} added to the blacklist.");
+            BlockBlacklistConfig.Current.BlockCodes.Add(blockCode);
+            BlockBlacklistConfig.Save(capi);
+            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} added to the client blacklist.");
         }
         else
         {
-            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is already in the blacklist.");
+            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is already in the client blacklist.");
         }
     }
     private TextCommandResult RemoveFromBlacklist(TextCommandCallingArgs arg)
     {
         int groupId;
-        IClientPlayer player = ValidatePlayer(arg, out groupId);
-        if (player == null)
+        IClientPlayer clientPlayer = ValidatePlayer(arg, out groupId);
+        if (clientPlayer == null)
         {
             return TextCommandResult.Error("[StepUp Advanced] Command execution failed.");
         }
@@ -250,16 +282,98 @@ public class StepUpAdvancedModSystem : ModSystem
             return TextCommandResult.Error("[StepUp Advanced] No block targeted.");
         }
         string blockCode = blockSel.Block.Code.ToString();
-        if (StepUpAdvancedConfig.Current.BlockBlacklist.Contains(blockCode))
+        if (BlockBlacklistConfig.Current.BlockCodes.Contains(blockCode))
         {
-            StepUpAdvancedConfig.Current.BlockBlacklist.Remove(blockCode);
-            StepUpAdvancedConfig.Save(capi);
-            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} removed from the blacklist.");
+            BlockBlacklistConfig.Current.BlockCodes.Remove(blockCode);
+            BlockBlacklistConfig.Save(capi);
+            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} removed from the client blacklist.");
         }
         else
         {
-            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is not in the blacklist.");
+            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is not in the client blacklist.");
         }
+    }
+    private TextCommandResult ListBlacklist(TextCommandCallingArgs arg)
+    {
+        var serverList = StepUpAdvancedConfig.Current?.BlockBlacklist ?? new List<string>();
+        var clientList = BlockBlacklistConfig.Current?.BlockCodes ?? new List<string>();
+
+        HashSet<string> merged = new HashSet<string>();
+        merged.UnionWith(serverList);
+        merged.UnionWith(clientList);
+
+        if (merged.Count == 0)
+            return TextCommandResult.Success("[StepUp Advanced] No blocks are currently blacklisted.");
+
+        return TextCommandResult.Success("[StepUp Advanced] Blacklisted blocks:\n- " + string.Join("\n- ", merged));
+    }
+    private TextCommandResult AddToServerBlacklist(TextCommandCallingArgs arg)
+    {
+        IServerPlayer player = arg.Caller.Player as IServerPlayer;
+        if (player == null)
+        {
+            return TextCommandResult.Error("[StepUp Advanced] Command execution failed: must be a server player.");
+        }
+        BlockSelection blockSel = player.CurrentBlockSelection;
+        if (blockSel == null)
+        {
+            return TextCommandResult.Error("[StepUp Advanced] No block targeted.");
+        }
+        string blockCode = blockSel.Block.Code.ToString();
+        if (!StepUpAdvancedConfig.Current.BlockBlacklist.Contains(blockCode))
+        {
+            StepUpAdvancedConfig.Current.BlockBlacklist.Add(blockCode);
+            StepUpAdvancedConfig.Save(sapi);
+            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} added to the server blacklist.");
+        }
+        else
+        {
+            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is already in the server blacklist.");
+        }
+    }
+    private TextCommandResult RemoveFromServerBlacklist(TextCommandCallingArgs arg)
+    {
+        IServerPlayer player = arg.Caller.Player as IServerPlayer;
+        if (player == null)
+        {
+            return TextCommandResult.Error("[StepUp Advanced] Command execution failed: must be a server player.");
+        }
+        BlockSelection blockSel = player.CurrentBlockSelection;
+        if (blockSel == null)
+        {
+            return TextCommandResult.Error("[StepUp Advanced] No block targeted.");
+        }
+        string blockCode = blockSel.Block.Code.ToString();
+        if (StepUpAdvancedConfig.Current.BlockBlacklist.Contains(blockCode))
+        {
+            StepUpAdvancedConfig.Current.BlockBlacklist.Remove(blockCode);
+            StepUpAdvancedConfig.Save(sapi);
+            return TextCommandResult.Success($"[StepUp Advanced] Block {blockCode} removed from the server blacklist.");
+        }
+        else
+        {
+            return TextCommandResult.Error($"[StepUp Advanced] Block {blockCode} is not in the server blacklist.");
+        }
+    }
+    private TextCommandResult ReloadServerConfig(TextCommandCallingArgs arg)
+    {
+        if (sapi == null)
+        {
+            return TextCommandResult.Error("[StepUp Advanced] Command execution failed: server api not initialized.");
+        }
+        StepUpAdvancedConfig.Load(sapi);
+
+        foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
+        {
+            sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
+        }
+
+        string resultMsg = StepUpAdvancedConfig.Current.ServerEnforceSettings
+            ? "[StepUp Advanced] Server config reloaded and enforced config pushed to all clients."
+            : "[StepUp Advanced] Server config reloaded. Clients may now use their local config.";
+
+        sapi.World.Logger.Event(resultMsg);
+        return TextCommandResult.Success(resultMsg);
     }
     private void RegisterHotkeys()
     {
@@ -322,7 +436,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (currentStepHeight > previousStepHeight)
         {
             StepUpAdvancedConfig.Current.StepHeight = currentStepHeight;
-            StepUpAdvancedConfig.Save(capi);
+            SafeSaveConfig(capi);
             ApplyStepHeightToPlayer();
             capi.ShowChatMessage($"Step height increased to {currentStepHeight:0.0} blocks.");
         }
@@ -363,7 +477,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (currentStepHeight < previousStepHeight)
         {
             StepUpAdvancedConfig.Current.StepHeight = currentStepHeight;
-            StepUpAdvancedConfig.Save(capi);
+            SafeSaveConfig(capi);
             ApplyStepHeightToPlayer();
             capi.ShowChatMessage($"Step height decreased to {currentStepHeight:0.0} blocks.");
         }
@@ -404,7 +518,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (currentElevateFactor > previousElevateFactor)
         {
             StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
-            StepUpAdvancedConfig.Save(capi);
+            SafeSaveConfig(capi);
             ApplyElevateFactorToPlayer(16f);
             capi.ShowChatMessage($"Step speed increased to {currentElevateFactor:0.0} blocks.");
         }
@@ -445,7 +559,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (currentElevateFactor < previousElevateFactor)
         {
             StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
-            StepUpAdvancedConfig.Save(capi);
+            SafeSaveConfig(capi);
             ApplyElevateFactorToPlayer(16f);
             capi.ShowChatMessage($"Step speed decreased to {currentElevateFactor:0.0} blocks.");
         }
@@ -460,7 +574,7 @@ public class StepUpAdvancedModSystem : ModSystem
         toggleStepUpKeyHeld = true;
         stepUpEnabled = !stepUpEnabled;
         StepUpAdvancedConfig.Current.StepUpEnabled = stepUpEnabled;
-        StepUpAdvancedConfig.Save(capi);
+        SafeSaveConfig(capi);
         ApplyStepHeightToPlayer();
         ApplyElevateFactorToPlayer(16f);
         string message = (stepUpEnabled ? "StepUp enabled." : "StepUp disabled.");
@@ -497,7 +611,19 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         BlockPos playerPos = player.Entity.Pos.AsBlockPos;
         IWorldAccessor world = player.Entity.World;
-        List<string> blacklist = StepUpAdvancedConfig.Current.BlockBlacklist;
+
+        var serverList = StepUpAdvancedConfig.Current?.BlockBlacklist ?? new List<string>();
+        var clientList = BlockBlacklistConfig.Current?.BlockCodes ?? new List<string>();
+        /*bool useClientWhitelist = false;
+        try
+        {
+            useClientWhitelist = BlockBlacklistConfig.Current?.UseWhitelistMode ?? false;
+        }
+        catch (Exception e)
+        {
+            capi.ShowChatMessage("[StepUp Advanced] Failed to read UseWhitelistMode: " + e.Message);
+        }*/
+
         BlockPos[] positionsToCheck = new BlockPos[]
         {
         //playerPos.DownCopy(), // Block directly below the player
@@ -513,10 +639,21 @@ public class StepUpAdvancedModSystem : ModSystem
         foreach (BlockPos pos in positionsToCheck)
         {
             Block block = world.BlockAccessor.GetBlock(pos);
-            if (blacklist.Contains(block.Code.ToString()))
-            {
+            string code = block.Code.ToString();
+
+            bool serverMatch = serverList.Contains(code);
+            bool clientMatch = clientList.Contains(code);
+
+            if (serverMatch)
                 return true;
-            }
+
+            /*if (useClientWhitelist && !clientMatch)
+                return true;
+
+            if (!useClientWhitelist && clientMatch)
+                return true;*/
+            if (clientMatch)
+                return true;
         }
         return false;
     }

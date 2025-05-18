@@ -32,17 +32,20 @@ public class StepUpAdvancedConfig
     public float StepSpeedIncrement { get; set; } = 0.1f;
     [ProtoBuf.ProtoMember(12)]
     public List<string> BlockBlacklist { get; set; } = new List<string>();
-    [ProtoMember(13)]
+    [ProtoBuf.ProtoMember(13)]
     public float ServerMinStepHeight { get; set; } = 0.6f;
 
-    [ProtoMember(14)]
+    [ProtoBuf.ProtoMember(14)]
     public float ServerMaxStepHeight { get; set; } = 1.2f;
 
-    [ProtoMember(15)]
+    [ProtoBuf.ProtoMember(15)]
     public float ServerMinStepSpeed { get; set; } = 0.7f;
 
-    [ProtoMember(16)]
+    [ProtoBuf.ProtoMember(16)]
     public float ServerMaxStepSpeed { get; set; } = 1.3f;
+
+    /*[ProtoBuf.ProtoMember(17)]
+    public bool UseBlockWhitelist { get; set; } = false;*/
 
     public static StepUpAdvancedConfig Current { get; private set; }
 
@@ -114,27 +117,18 @@ public class StepUpAdvancedConfig
     }
 
     public static void Save(ICoreAPI api)
-	{
-        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem modSystem)
-        {
-            modSystem.SuppressWatcher(true);
-        }
+    {
         if (api is ICoreClientAPI clientApi && clientApi.IsSinglePlayer)
         {
             Current.ServerEnforceSettings = false;
         }
-        api.GetOrCreateDataPath("ModConfig");
-		string configFile = "StepUpAdvancedConfig.json";
-		api.StoreModConfig(Current, configFile);
-		api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
 
-        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem ms)
-        {
-            ms.SuppressWatcher(false);
-        }
+        string configFile = "StepUpAdvancedConfig.json";
+        api.StoreModConfig(Current, configFile);
+        api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
     }
 
-	public static void UpdateConfig(StepUpAdvancedConfig newConfig)
+    public static void UpdateConfig(StepUpAdvancedConfig newConfig)
 	{
 		Current = newConfig;
 	}
