@@ -8,6 +8,8 @@ using Vintagestory.API.Server;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
+using System.IO;
+using System.Threading;
 
 namespace stepupadvanced;
 
@@ -15,7 +17,15 @@ public class StepUpAdvancedModSystem : ModSystem
 {
     private bool stepUpEnabled = true;
 
-    private bool serverEnforceSettings;
+    private FileSystemWatcher configWatcher;
+
+    private string configPath => Path.Combine(sapi?.GetOrCreateDataPath("ModConfig") ?? "", "StepUpAdvancedConfig.json");
+
+    private bool suppressWatcher = false;
+
+    private bool IsEnforced =>
+        (sapi != null && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true)
+        || (capi != null && !capi.IsSinglePlayer && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true);
 
     private static ICoreClientAPI capi;
 
@@ -49,6 +59,8 @@ public class StepUpAdvancedModSystem : ModSystem
 
     private bool hasShownMinEMessage;
 
+    private bool hasShownServerEnforcedNotice;
+
     private bool toggleStepUpKeyHeld;
 
     private bool reloadConfigKeyHeld;
@@ -77,15 +89,16 @@ public class StepUpAdvancedModSystem : ModSystem
         base.StartServerSide(api);
         sapi = api;
         StepUpAdvancedConfig.Load(api);
-        serverEnforceSettings = StepUpAdvancedConfig.Current?.ServerEnforceSettings ?? false;
         var channel = sapi.Network.RegisterChannel("stepupadvanced")
-        .RegisterMessageType<StepUpAdvancedConfig>();
+            .RegisterMessageType<StepUpAdvancedConfig>();
 
         if (channel == null)
         {
             sapi.World.Logger.Error("[StepUp Advanced] Failed to register network channel!");
         }
         api.Event.PlayerNowPlaying += OnPlayerJoin;
+
+        SetupConfigWatcher();
     }
 
     public override void StartClientSide(ICoreClientAPI api)
@@ -110,36 +123,70 @@ public class StepUpAdvancedModSystem : ModSystem
 
     private void OnPlayerJoin(IServerPlayer player)
     {
-        if (StepUpAdvancedConfig.Current == null)
+        if (StepUpAdvancedConfig.Current == null || sapi == null)
         {
-            sapi.World.Logger.Error("[StepUp Advanced] Configuration not loaded! Cannot enforce settings.");
+            sapi?.World.Logger.Error("[StepUp Advanced] Cannot process OnPlayerJoin: config or server API is null.");
             return;
         }
-        if (serverEnforceSettings)
+        if (IsEnforced)
         {
             sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
-        }
-        if (sapi == null)
-        {
-            return;
         }
     }
 
     private void OnReceiveServerConfig(StepUpAdvancedConfig config)
     {
-        if (capi != null)
+        if (capi == null) return;
+
+        try
         {
-            StepUpAdvancedConfig.UpdateConfig(config);
-            StepUpAdvancedConfig.Save(capi);
-            serverEnforceSettings = StepUpAdvancedConfig.Current.ServerEnforceSettings;
-            StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
-            StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
-            if (serverEnforceSettings)
+            // Determine if this is a real multiplayer client (not host, not SP)
+            bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
+
+            // Set enforcement BEFORE using the config
+            if (isRemoteMultiplayerClient)
             {
-                capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings active. Your local settings are disabled.");
+                config.ServerEnforceSettings = true;
             }
-            ApplyStepHeightToPlayer();
-            ApplyElevateFactorToPlayer(16f);
+
+            capi.Event.EnqueueMainThreadTask(() =>
+            {
+                // Apply the updated config to memory
+                StepUpAdvancedConfig.UpdateConfig(config);
+
+                // Reassert server enforcement after assignment
+                if (isRemoteMultiplayerClient)
+                {
+                    StepUpAdvancedConfig.Current.ServerEnforceSettings = true;
+                }
+
+                StepUpAdvancedConfig.Save(capi);
+
+                StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
+                StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
+
+                // Notify user only if something changed
+                if (!IsEnforced && hasShownServerEnforcedNotice)
+                {
+                    capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings deactivated. Your local settings are now enabled.");
+                    hasShownServerEnforcedNotice = false;
+                }
+
+                if (IsEnforced && !hasShownServerEnforcedNotice)
+                {
+                    capi.ShowChatMessage("[StepUp Advanced] Server-enforced settings active. Your local settings are disabled.");
+                    hasShownServerEnforcedNotice = true;
+                }
+
+                ApplyStepHeightToPlayer();
+                ApplyElevateFactorToPlayer(16f);
+
+            }, "ApplyStepUpServerConfig");
+        }
+        catch (Exception ex)
+        {
+            capi.ShowChatMessage("[StepUp Advanced] ERROR applying server config. See client-main.txt.");
+            capi.Logger.Error("[StepUp Advanced] Failed to apply server config: " + ex);
         }
     }
     private void RegisterCommands()
@@ -242,7 +289,7 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private bool OnIncreaseStepHeight(KeyCombination comb)
     {
-        if (serverEnforceSettings && !StepUpAdvancedConfig.Current.AllowClientChangeStepHeight)
+        if (IsEnforced && !StepUpAdvancedConfig.Current.AllowClientChangeStepHeight)
         {
             if (!hasShownMaxEMessage)
             {
@@ -252,7 +299,8 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMaxEMessage = false;
-        if (Math.Abs(currentStepHeight - 2f) < 0.01f)
+
+        if (IsEnforced && Math.Abs(currentStepHeight - StepUpAdvancedConfig.Current.ServerMaxStepHeight) < 0.01f)
         {
             if (!hasShownMaxMessage)
             {
@@ -262,9 +310,15 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMaxMessage = false;
+
         float previousStepHeight = currentStepHeight;
         currentStepHeight += Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
-        currentStepHeight = GameMath.Clamp(currentStepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+
+        if (IsEnforced)
+        {
+            currentStepHeight = GameMath.Clamp(currentStepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+        }
+
         if (currentStepHeight > previousStepHeight)
         {
             StepUpAdvancedConfig.Current.StepHeight = currentStepHeight;
@@ -276,7 +330,7 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private bool OnDecreaseStepHeight(KeyCombination comb)
     {
-        if (serverEnforceSettings && !StepUpAdvancedConfig.Current.AllowClientChangeStepHeight)
+        if (IsEnforced && !StepUpAdvancedConfig.Current.AllowClientChangeStepHeight)
         {
             if (!hasShownMinEMessage)
             {
@@ -286,7 +340,8 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMinEMessage = false;
-        if (Math.Abs(currentStepHeight - 0.2f) < 0.01f)
+
+        if (IsEnforced && Math.Abs(currentStepHeight - StepUpAdvancedConfig.Current.ServerMinStepHeight) < 0.01f)
         {
             if (!hasShownMinMessage)
             {
@@ -296,9 +351,15 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMinMessage = false;
+
         float previousStepHeight = currentStepHeight;
         currentStepHeight -= Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
-        currentStepHeight = GameMath.Clamp(currentStepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+
+        if (IsEnforced)
+        {
+            currentStepHeight = GameMath.Clamp(currentStepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+        }
+
         if (currentStepHeight < previousStepHeight)
         {
             StepUpAdvancedConfig.Current.StepHeight = currentStepHeight;
@@ -310,7 +371,7 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private bool OnIncreaseElevateFactor(KeyCombination comb)
     {
-        if (serverEnforceSettings && !StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed)
+        if (IsEnforced && !StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed)
         {
             if (!hasShownMaxEMessage)
             {
@@ -320,7 +381,8 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMaxEMessage = false;
-        if (Math.Abs(currentElevateFactor - 2f) < 0.01f)
+
+        if (IsEnforced && Math.Abs(currentElevateFactor - StepUpAdvancedConfig.Current.ServerMaxStepSpeed) < 0.01f)
         {
             if (!hasShownMaxMessage)
             {
@@ -330,9 +392,15 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMaxMessage = false;
+
         float previousElevateFactor = currentElevateFactor;
         currentElevateFactor += Math.Max(StepUpAdvancedConfig.Current.StepSpeedIncrement, 0.01f);
-        currentElevateFactor = GameMath.Clamp(currentElevateFactor, StepUpAdvancedConfig.Current.ServerMinStepSpeed, StepUpAdvancedConfig.Current.ServerMaxStepSpeed);
+
+        if (IsEnforced)
+        {
+            currentElevateFactor = GameMath.Clamp(currentElevateFactor, StepUpAdvancedConfig.Current.ServerMinStepSpeed, StepUpAdvancedConfig.Current.ServerMaxStepSpeed);
+        }
+
         if (currentElevateFactor > previousElevateFactor)
         {
             StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
@@ -344,7 +412,7 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private bool OnDecreaseElevateFactor(KeyCombination comb)
     {
-        if (serverEnforceSettings && !StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed)
+        if (IsEnforced && !StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed)
         {
             if (!hasShownMinEMessage)
             {
@@ -354,7 +422,8 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMinEMessage = false;
-        if (Math.Abs(currentElevateFactor - 0.5f) < 0.01f)
+
+        if (IsEnforced && Math.Abs(currentElevateFactor - StepUpAdvancedConfig.Current.ServerMinStepSpeed) < 0.01f)
         {
             if (!hasShownMinMessage)
             {
@@ -364,9 +433,15 @@ public class StepUpAdvancedModSystem : ModSystem
             return false;
         }
         hasShownMinMessage = false;
+
         float previousElevateFactor = currentElevateFactor;
         currentElevateFactor -= Math.Max(StepUpAdvancedConfig.Current.StepSpeedIncrement, 0.01f);
-        currentElevateFactor = GameMath.Clamp(currentElevateFactor, StepUpAdvancedConfig.Current.ServerMinStepSpeed, StepUpAdvancedConfig.Current.ServerMaxStepSpeed);
+
+        if (IsEnforced)
+        {
+            currentElevateFactor = GameMath.Clamp(currentElevateFactor, StepUpAdvancedConfig.Current.ServerMinStepSpeed, StepUpAdvancedConfig.Current.ServerMaxStepSpeed);
+        }
+
         if (currentElevateFactor < previousElevateFactor)
         {
             StepUpAdvancedConfig.Current.StepSpeed = currentElevateFactor;
@@ -394,7 +469,7 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private bool OnReloadConfig(KeyCombination comb)
     {
-        if (serverEnforceSettings && !StepUpAdvancedConfig.Current.AllowClientConfigReload)
+        if (IsEnforced && !StepUpAdvancedConfig.Current.AllowClientConfigReload)
         {
             if (!hasShownMaxMessage)
             {
@@ -460,8 +535,24 @@ public class StepUpAdvancedModSystem : ModSystem
             return;
         }
         bool nearBlacklistedBlock = IsNearBlacklistedBlock(player);
-        float stepHeight = (serverEnforceSettings && stepUpEnabled && !nearBlacklistedBlock) ? currentStepHeight : StepUpAdvancedConfig.Current.DefaultHeight;
-        stepHeight = GameMath.Clamp(stepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+        float stepHeight;
+
+        if (!stepUpEnabled)
+        {
+            stepHeight = 0.6f;
+        }
+        else if (!IsEnforced)
+        {
+            stepHeight = currentStepHeight;
+        }
+        else if (!nearBlacklistedBlock)
+        {
+            stepHeight = GameMath.Clamp(currentStepHeight, StepUpAdvancedConfig.Current.ServerMinStepHeight, StepUpAdvancedConfig.Current.ServerMaxStepHeight);
+        }
+        else
+        {
+            stepHeight = StepUpAdvancedConfig.Current.DefaultHeight;
+        }
         try
         {
             Type type = physicsBehavior.GetType();
@@ -497,9 +588,64 @@ public class StepUpAdvancedModSystem : ModSystem
         FieldInfo elevateFactorField = physicsBehavior.GetType().GetField("elevateFactor", BindingFlags.Instance | BindingFlags.NonPublic);
         if (!(elevateFactorField == null))
         {
-            double customElevateFactor = (serverEnforceSettings && stepUpEnabled ? ((double)StepUpAdvancedConfig.Current.StepSpeed) : 0.05);
+            double customElevateFactor = (IsEnforced && stepUpEnabled ? ((double)StepUpAdvancedConfig.Current.StepSpeed) : 0.05);
             elevateFactorField.SetValue(physicsBehavior, customElevateFactor);
             _ = (double)elevateFactorField.GetValue(physicsBehavior);
         }
+    }
+
+    private void SetupConfigWatcher()
+    {
+        string directory = Path.GetDirectoryName(configPath);
+        string filename = Path.GetFileName(configPath);
+
+        if (directory == null || filename == null)
+        {
+            sapi.World.Logger.Warning("[StepUp Advanced] Could not initialize config file watcher: invalid path.");
+            return;
+        }
+
+        configWatcher = new FileSystemWatcher(directory, filename);
+        configWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
+
+        configWatcher.Changed += (sender, args) =>
+        {
+            if (suppressWatcher) return;
+
+            Thread.Sleep(100);
+            sapi.Event.EnqueueMainThreadTask(() =>
+            {
+                sapi.World.Logger.Event("[StepUp Advanced] Detected config file change. Reloading...");
+                StepUpAdvancedConfig.Load(sapi);
+
+                foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
+                {
+                    sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
+                }
+
+                if (StepUpAdvancedConfig.Current.ServerEnforceSettings)
+                {
+                    sapi.World.Logger.Event("[StepUp Advanced] Server-enforced config pushed to all clients.");
+                }
+                else
+                {
+                    sapi.World.Logger.Event("[StepUp Advanced] Config pushed (server enforcement disabled, allows client-side config again).");
+                }
+            }, "ReloadStepUpAdvancedConfig");
+        };
+
+        configWatcher.EnableRaisingEvents = true;
+        sapi.World.Logger.Event("[StepUp Advanced] File watcher initialized for config auto-reloading.");
+    }
+
+    public void SuppressWatcher(bool suppress)
+    {
+        suppressWatcher = suppress;
+    }
+
+    public override void Dispose()
+    {
+        configWatcher?.Dispose();
+        base.Dispose();
     }
 }

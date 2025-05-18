@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Vintagestory.API.Common;
 using ProtoBuf;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Client;
 
 namespace stepupadvanced;
 [ProtoBuf.ProtoContract]
@@ -22,7 +23,7 @@ public class StepUpAdvancedConfig
     [ProtoBuf.ProtoMember(7)]
     public float StepSpeed { get; set; } = 1.3f;
     [ProtoBuf.ProtoMember(8)]
-    public float DefaultHeight { get; set; } = 0.2f;
+    public float DefaultHeight { get; set; } = 0.6f;
     [ProtoBuf.ProtoMember(9)]
     public float DefaultSpeed { get; set; } = 0.7f;
     [ProtoBuf.ProtoMember(10)]
@@ -32,16 +33,16 @@ public class StepUpAdvancedConfig
     [ProtoBuf.ProtoMember(12)]
     public List<string> BlockBlacklist { get; set; } = new List<string>();
     [ProtoMember(13)]
-    public float ServerMinStepHeight { get; set; } = 0.2f;
+    public float ServerMinStepHeight { get; set; } = 0.6f;
 
     [ProtoMember(14)]
-    public float ServerMaxStepHeight { get; set; } = 2f;
+    public float ServerMaxStepHeight { get; set; } = 1.2f;
 
     [ProtoMember(15)]
-    public float ServerMinStepSpeed { get; set; } = 0.5f;
+    public float ServerMinStepSpeed { get; set; } = 0.7f;
 
     [ProtoMember(16)]
-    public float ServerMaxStepSpeed { get; set; } = 2f;
+    public float ServerMaxStepSpeed { get; set; } = 1.3f;
 
     public static StepUpAdvancedConfig Current { get; private set; }
 
@@ -106,16 +107,32 @@ public class StepUpAdvancedConfig
 			Save(api);
 			api.World.Logger.Event("Created default 'StepUp Advanced' configuration file.");
 		}
-		Save(api);
-	}
+        if (loadedConfig == null)
+        {
+            Save(api);
+        }
+    }
 
-	public static void Save(ICoreAPI api)
+    public static void Save(ICoreAPI api)
 	{
-		api.GetOrCreateDataPath("ModConfig");
+        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem modSystem)
+        {
+            modSystem.SuppressWatcher(true);
+        }
+        if (api is ICoreClientAPI clientApi && clientApi.IsSinglePlayer)
+        {
+            Current.ServerEnforceSettings = false;
+        }
+        api.GetOrCreateDataPath("ModConfig");
 		string configFile = "StepUpAdvancedConfig.json";
 		api.StoreModConfig(Current, configFile);
 		api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
-	}
+
+        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem ms)
+        {
+            ms.SuppressWatcher(false);
+        }
+    }
 
 	public static void UpdateConfig(StepUpAdvancedConfig newConfig)
 	{
