@@ -69,37 +69,37 @@ public class StepUpAdvancedModSystem : ModSystem
 {
     private DateTime lastSaveTime = DateTime.MinValue;
 
-    private void SafeSaveConfig(ICoreAPI api)
-    {
-        if ((DateTime.Now - lastSaveTime).TotalMilliseconds < 500) return;
-        lastSaveTime = DateTime.Now;
-
-        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem modSystem)
+        private void SafeSaveConfig(ICoreAPI api)
         {
-            modSystem.SuppressWatcher(true);
+            if ((DateTime.Now - lastSaveTime).TotalMilliseconds < 500) return;
+            lastSaveTime = DateTime.Now;
+
+            if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem modSystem)
+            {
+                modSystem.SuppressWatcher(true);
+            }
+
+            string configFile = "StepUpAdvancedConfig.json";
+            api.StoreModConfig(StepUpAdvancedConfig.Current, configFile);
+            api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
+
+            if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem ms)
+            {
+                ms.SuppressWatcher(false);
+            }
         }
 
-        string configFile = "StepUpAdvancedConfig.json";
-        api.StoreModConfig(StepUpAdvancedConfig.Current, configFile);
-        api.World.Logger.Event("Saved 'StepUp Advanced' configuration file.");
+        private bool stepUpEnabled = true;
 
-        if (api.ModLoader.GetModSystem<StepUpAdvancedModSystem>() is StepUpAdvancedModSystem ms)
-        {
-            ms.SuppressWatcher(false);
-        }
-    }
+        private FileSystemWatcher configWatcher;
 
-    private bool stepUpEnabled = true;
+        private string configPath => Path.Combine(sapi?.GetOrCreateDataPath("ModConfig") ?? "", "StepUpAdvancedConfig.json");
 
-    private FileSystemWatcher configWatcher;
+        private bool suppressWatcher = false;
 
-    private string configPath => Path.Combine(sapi?.GetOrCreateDataPath("ModConfig") ?? "", "StepUpAdvancedConfig.json");
-
-    private bool suppressWatcher = false;
-
-    private bool IsEnforced =>
-        (sapi != null && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true)
-        || (capi != null && !capi.IsSinglePlayer && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true);
+        private bool IsEnforced =>
+            (sapi != null && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true)
+            || (capi != null && !capi.IsSinglePlayer && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true);
 
     private static ICoreClientAPI capi;
     private static ICoreServerAPI sapi;
@@ -172,23 +172,23 @@ public class StepUpAdvancedModSystem : ModSystem
         api.World.Logger.Event("Initialized 'StepUp Advanced' mod");
     }
 
-    public override void StartServerSide(ICoreServerAPI api)
-    {
-        base.StartServerSide(api);
-        sapi = api;
-        StepUpAdvancedConfig.Load(api);
-        var channel = sapi.Network.RegisterChannel("stepupadvanced")
-            .RegisterMessageType<StepUpAdvancedConfig>();
-
-        if (channel == null)
+        public override void StartServerSide(ICoreServerAPI api)
         {
-            sapi.World.Logger.Error("[StepUp Advanced] Failed to register network channel!");
-        }
-        api.Event.PlayerNowPlaying += OnPlayerJoin;
+            base.StartServerSide(api);
+            sapi = api;
+            StepUpAdvancedConfig.Load(api);
+            var channel = sapi.Network.RegisterChannel("stepupadvanced")
+                .RegisterMessageType<StepUpAdvancedConfig>();
 
-        SetupConfigWatcher();
-        RegisterServerCommands();
-    }
+            if (channel == null)
+            {
+                sapi.World.Logger.Error("[StepUp Advanced] Failed to register network channel!");
+            }
+            api.Event.PlayerNowPlaying += OnPlayerJoin;
+
+            SetupConfigWatcher();
+            RegisterServerCommands();
+        }
 
     public override void StartClientSide(ICoreClientAPI api)
     {
@@ -230,43 +230,43 @@ public class StepUpAdvancedModSystem : ModSystem
         RegisterCommands();
     }
 
-    private void OnPlayerJoin(IServerPlayer player)
-    {
-        if (StepUpAdvancedConfig.Current == null || sapi == null)
+        private void OnPlayerJoin(IServerPlayer player)
         {
-            sapi?.World.Logger.Error("[StepUp Advanced] Cannot process OnPlayerJoin: config or server API is null.");
-            return;
-        }
-        if (IsEnforced)
-        {
-            sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
-        }
-    }
-
-    private void OnReceiveServerConfig(StepUpAdvancedConfig config)
-    {
-        if (capi == null) return;
-
-        bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
-
-        if (!isRemoteMultiplayerClient)
-        {
-            config.ServerEnforceSettings = false;
+            if (StepUpAdvancedConfig.Current == null || sapi == null)
+            {
+                sapi?.World.Logger.Error("[StepUp Advanced] Cannot process OnPlayerJoin: config or server API is null.");
+                return;
+            }
+            if (IsEnforced)
+            {
+                sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
+            }
         }
 
-        capi.Event.EnqueueMainThreadTask(() =>
+        private void OnReceiveServerConfig(StepUpAdvancedConfig config)
         {
-            StepUpAdvancedConfig.UpdateConfig(config);
+            if (capi == null) return;
+
+            bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
 
             if (!isRemoteMultiplayerClient)
             {
-                StepUpAdvancedConfig.Current.ServerEnforceSettings = false;
+                config.ServerEnforceSettings = false;
             }
 
-            SafeSaveConfig(capi);
+            capi.Event.EnqueueMainThreadTask(() =>
+            {
+                StepUpAdvancedConfig.UpdateConfig(config);
 
-            StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
-            StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
+                if (!isRemoteMultiplayerClient)
+                {
+                    StepUpAdvancedConfig.Current.ServerEnforceSettings = false;
+                }
+
+                SafeSaveConfig(capi);
+
+                StepUpAdvancedConfig.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
+                StepUpAdvancedConfig.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
 
             if (!IsEnforced && hasShownServerEnforcedNotice)
             {
@@ -502,8 +502,8 @@ public class StepUpAdvancedModSystem : ModSystem
         }
         hasShownMaxMessage = false;
 
-        float previousStepHeight = currentStepHeight;
-        currentStepHeight += Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
+            float previousStepHeight = currentStepHeight;
+            currentStepHeight += Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
 
         currentStepHeight = ClampHeightClient(currentStepHeight);
 
@@ -555,8 +555,8 @@ public class StepUpAdvancedModSystem : ModSystem
         }
         hasShownMinMessage = false;
 
-        float previousStepHeight = currentStepHeight;
-        currentStepHeight -= Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
+            float previousStepHeight = currentStepHeight;
+            currentStepHeight -= Math.Max(StepUpAdvancedConfig.Current.StepHeightIncrement, 0.1f);
 
         currentStepHeight = ClampHeightClient(currentStepHeight);
 
@@ -845,49 +845,49 @@ public class StepUpAdvancedModSystem : ModSystem
         }
     }
 
-    private void SetupConfigWatcher()
-    {
-        string directory = Path.GetDirectoryName(configPath);
-        string filename = Path.GetFileName(configPath);
-
-        if (directory == null || filename == null)
+        private void SetupConfigWatcher()
         {
-            sapi.World.Logger.Warning("[StepUp Advanced] Could not initialize config file watcher: invalid path.");
-            return;
-        }
+            string directory = Path.GetDirectoryName(configPath);
+            string filename = Path.GetFileName(configPath);
 
-        configWatcher = new FileSystemWatcher(directory, filename);
-        configWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
-
-        configWatcher.Changed += (sender, args) =>
-        {
-            if (suppressWatcher) return;
-
-            Thread.Sleep(100);
-            sapi.Event.EnqueueMainThreadTask(() =>
+            if (directory == null || filename == null)
             {
-                sapi.World.Logger.Event("[StepUp Advanced] Detected config file change. Reloading...");
-                StepUpAdvancedConfig.Load(sapi);
+                sapi.World.Logger.Warning("[StepUp Advanced] Could not initialize config file watcher: invalid path.");
+                return;
+            }
 
-                foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
-                {
-                    sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
-                }
+            configWatcher = new FileSystemWatcher(directory, filename);
+            configWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
 
-                if (StepUpAdvancedConfig.Current.ServerEnforceSettings)
-                {
-                    sapi.World.Logger.Event("[StepUp Advanced] Server-enforced config pushed to all clients.");
-                }
-                else
-                {
-                    sapi.World.Logger.Event("[StepUp Advanced] Config pushed (server enforcement disabled, allows client-side config again).");
-                }
-            }, "ReloadStepUpAdvancedConfig");
-        };
+            configWatcher.Changed += (sender, args) =>
+            {
+                if (suppressWatcher) return;
 
-        configWatcher.EnableRaisingEvents = true;
-        sapi.World.Logger.Event("[StepUp Advanced] File watcher initialized for config auto-reloading.");
-    }
+                Thread.Sleep(100);
+                sapi.Event.EnqueueMainThreadTask(() =>
+                {
+                    sapi.World.Logger.Event("[StepUp Advanced] Detected config file change. Reloading...");
+                    StepUpAdvancedConfig.Load(sapi);
+
+                    foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
+                    {
+                        sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpAdvancedConfig.Current, player);
+                    }
+
+                    if (StepUpAdvancedConfig.Current.ServerEnforceSettings)
+                    {
+                        sapi.World.Logger.Event("[StepUp Advanced] Server-enforced config pushed to all clients.");
+                    }
+                    else
+                    {
+                        sapi.World.Logger.Event("[StepUp Advanced] Config pushed (server enforcement disabled, allows client-side config again).");
+                    }
+                }, "ReloadStepUpAdvancedConfig");
+            };
+
+            configWatcher.EnableRaisingEvents = true;
+            sapi.World.Logger.Event("[StepUp Advanced] File watcher initialized for config auto-reloading.");
+        }
 
     private static bool IsSolidBlock(IWorldAccessor world, BlockPos pos)
     {
@@ -1000,9 +1000,10 @@ public class StepUpAdvancedModSystem : ModSystem
         suppressWatcher = suppress;
     }
 
-    public override void Dispose()
-    {
-        configWatcher?.Dispose();
-        base.Dispose();
+        public override void Dispose()
+        {
+            configWatcher?.Dispose();
+            base.Dispose();
+        }
     }
 }
