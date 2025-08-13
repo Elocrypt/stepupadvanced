@@ -1,0 +1,79 @@
+{
+  "comment_description": "Arquivo de localização em português (Brasil) para 'StepUp Advanced'.",
+  "comment_version": "Versão do mod: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Comunidade, assistido por máquina",
+  "comment_technical_details": "Uso de termos comuns de jogos em PT-BR. Nomes técnicos mantidos (StepUp, Harmony, Server API). {0} preservado. Espaços preservados.",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} blocos ",
+
+  "sua:server-enforcement-on": " Aplicação do servidor ATIVADA. ",
+  "sua:server-enforcement-off": " Aplicação do servidor DESATIVADA. ",
+  "sua:local-settings-enabled": " Configurações locais habilitadas ",
+  "sua:local-settings-disabled": " Configurações locais desabilitadas ",
+
+  "sua:speed-only-mode": " Modo apenas velocidade ",
+  "sua:height-controls-disabled": " Controles de altura desativados ",
+
+  "sua:server-enforced": " Imposto pelo servidor ",
+  "sua:height-change-blocked": " Alteração de altura bloqueada ",
+  "sua:speed-change-blocked": " Alteração de velocidade bloqueada ",
+
+  "sua:max-height": " Altura máxima ",
+  "sua:min-height": " Altura mínima ",
+  "sua:height": " Altura ",
+  "sua:speed": " Velocidade ",
+  "sua:max-speed": " Velocidade máxima ",
+  "sua:min-speed": " Velocidade mínima ",
+
+  "sua:stepup-enabled": " StepUp ativado ",
+  "sua:stepup-disabled": " StepUp desativado ",
+  "sua:reload-blocked": " Recarregamento bloqueado ",
+  "sua:config-reloaded": " Configuração recarregada. ",
+
+  "sua:cmd.failed": " Comando falhou. ",
+  "sua:cmd.must-be-player": " Você precisa ser jogador para usar este comando. ",
+  "sua:cmd.must-be-server-player": " Precisa ser um jogador do servidor. ",
+  "sua:cmd.no-block-targeted": " Nenhum bloco selecionado. ",
+
+  "sua:cmd.already-listed": " Já está na lista. ",
+  "sua:cmd.not-listed-client": " Não está na lista de bloqueio do cliente ",
+  "sua:cmd.is-on-blacklist": " está na sua lista de bloqueio. ",
+  "sua:cmd.already-listed-server": " Já está na lista de bloqueio do servidor ",
+  "sua:cmd.not-on-server-blacklist": " Não está na lista de bloqueio do servidor ",
+
+  "sua:cmd.added-client-blacklist": " Adicionado à lista de bloqueio do cliente ",
+  "sua:cmd.removed-client-blacklist": " Removido da lista de bloqueio do cliente ",
+  "sua:cmd.added-server-blacklist": " Adicionado à lista de bloqueio do servidor ",
+  "sua:cmd.removed-server-blacklist": " Removido da lista de bloqueio do servidor ",
+
+  "sua:cmd.blacklisted-blocks-title": " Blocos na lista de bloqueio ",
+  "sua:cmd.none-blacklisted": " Nenhum bloco está na lista de bloqueio no momento. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API não inicializada. ",
+  "sua:cmd.server-config-reloaded": " Configuração do servidor recarregada. ",
+  "sua:cmd.pushed": " Enviada ",
+  "sua:cmd.enforced": " FORÇADA ",
+  "sua:cmd.config": " configuração para todos os clientes. ",
+  "sua:cmd.clients-may-use-local": " Os clientes agora podem usar a configuração local. ",
+
+  "sua:error.stepheight-field-missing": " Campo StepHeight não encontrado. ",
+  "sua:error.stepheight-set-failed": " Falha ao definir a altura. ",
+  "sua:warn.elevatefactor-field-missing": " Campo 'elevateFactor' não encontrado; StepSpeed é controlada apenas pelo Harmony. ",
+
+  "sua:desc.sua.client": " Gerenciar a lista de bloqueio do cliente ",
+  "sua:desc.sua.server": " Gerenciar a lista de bloqueio do servidor ",
+  "sua:desc.sua.add": " Adiciona o bloco selecionado à lista de bloqueio do StepUp. ",
+  "sua:desc.sua.remove": " Remove o bloco selecionado da lista de bloqueio do StepUp. ",
+  "sua:desc.sua.list": " Lista todos os blocos na lista de bloqueio. ",
+  "sua:desc.sua.reload": " Recarrega a configuração do servidor e sincroniza com todos os clientes. ",
+
+  "sua:key.increase-height": " Aumentar altura do passo ",
+  "sua:key.decrease-height": " Diminuir altura do passo ",
+  "sua:key.increase-speed": " Aumentar velocidade do passo ",
+  "sua:key.decrease-speed": " Diminuir velocidade do passo ",
+  "sua:key.toggle": " Alternar StepUp ",
+  "sua:key.reload": " Recarregar configuração "
+}

@@ -1,0 +1,79 @@
+{
+  "comment_description": "Nederlandse vertaalbestand voor 'StepUp Advanced'.",
+  "comment_version": "Mod Versie: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Community, machine-assisted",
+  "comment_technical_details": "Neutrale toon. Technische namen (StepUp, Harmony, Server API) ongewijzigd. {0} behouden. Spaties uit het origineel behouden.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} blokken ",
+
+  "sua:server-enforcement-on": " Serverafdwinging AAN. ",
+  "sua:server-enforcement-off": " Serverafdwinging UIT. ",
+  "sua:local-settings-enabled": " Lokale instellingen ingeschakeld ",
+  "sua:local-settings-disabled": " Lokale instellingen uitgeschakeld ",
+
+  "sua:speed-only-mode": " Alleen-snelheidmodus ",
+  "sua:height-controls-disabled": " Hoogtebediening uitgeschakeld ",
+
+  "sua:server-enforced": " Door server afgedwongen ",
+  "sua:height-change-blocked": " Hoogtewijziging geblokkeerd ",
+  "sua:speed-change-blocked": " Snelheidswijziging geblokkeerd ",
+
+  "sua:max-height": " Maximale hoogte ",
+  "sua:min-height": " Minimale hoogte ",
+  "sua:height": " Hoogte ",
+  "sua:speed": " Snelheid ",
+  "sua:max-speed": " Maximale snelheid ",
+  "sua:min-speed": " Minimale snelheid ",
+
+  "sua:stepup-enabled": " StepUp ingeschakeld ",
+  "sua:stepup-disabled": " StepUp uitgeschakeld ",
+  "sua:reload-blocked": " Herladen geblokkeerd ",
+  "sua:config-reloaded": " Configuratie herladen. ",
+
+  "sua:cmd.failed": " Opdracht mislukt. ",
+  "sua:cmd.must-be-player": " Je moet een speler zijn om dit commando te gebruiken. ",
+  "sua:cmd.must-be-server-player": " Moet een server-speler zijn. ",
+  "sua:cmd.no-block-targeted": " Geen blok geselecteerd. ",
+
+  "sua:cmd.already-listed": " Reeds vermeld. ",
+  "sua:cmd.not-listed-client": " Niet in de client-zwarte lijst ",
+  "sua:cmd.is-on-blacklist": " staat op je zwarte lijst. ",
+  "sua:cmd.already-listed-server": " Reeds op de server-zwarte lijst ",
+  "sua:cmd.not-on-server-blacklist": " Niet op de server-zwarte lijst ",
+
+  "sua:cmd.added-client-blacklist": " Toegevoegd aan de client-zwarte lijst ",
+  "sua:cmd.removed-client-blacklist": " Verwijderd van de client-zwarte lijst ",
+  "sua:cmd.added-server-blacklist": " Toegevoegd aan de server-zwarte lijst ",
+  "sua:cmd.removed-server-blacklist": " Verwijderd van de server-zwarte lijst ",
+
+  "sua:cmd.blacklisted-blocks-title": " Geblokkeerde blokken ",
+  "sua:cmd.none-blacklisted": " Momenteel staan er geen blokken op de zwarte lijst. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API niet geïnitialiseerd. ",
+  "sua:cmd.server-config-reloaded": " Serverconfiguratie herladen. ",
+  "sua:cmd.pushed": " Verstuurd ",
+  "sua:cmd.enforced": " AFGEDWONGEN ",
+  "sua:cmd.config": " configuratie naar alle clients. ",
+  "sua:cmd.clients-may-use-local": " Clients mogen nu lokale configuratie gebruiken. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight-veld niet gevonden. ",
+  "sua:error.stepheight-set-failed": " Hoogte instellen mislukt. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' niet gevonden; StepSpeed wordt alleen via Harmony geregeld. ",
+
+  "sua:desc.sua.client": " Beheer de client-zwarte lijst ",
+  "sua:desc.sua.server": " Beheer de server-zwarte lijst ",
+  "sua:desc.sua.add": " Voegt het geselecteerde blok toe aan de StepUp-zwarte lijst. ",
+  "sua:desc.sua.remove": " Verwijdert het geselecteerde blok van de StepUp-zwarte lijst. ",
+  "sua:desc.sua.list": " Toont alle geblokkeerde blokken. ",
+  "sua:desc.sua.reload": " Laadt de serverconfig opnieuw en synchroniseert alle clients. ",
+
+  "sua:key.increase-height": " Staphoogte verhogen ",
+  "sua:key.decrease-height": " Staphoogte verlagen ",
+  "sua:key.increase-speed": " Stapsnelheid verhogen ",
+  "sua:key.decrease-speed": " Stapsnelheid verlagen ",
+  "sua:key.toggle": " StepUp wisselen ",
+  "sua:key.reload": " Configuratie herladen "
+}

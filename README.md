@@ -10,6 +10,9 @@ StepUp Advanced takes the convenience of the original [StepUp][SU] mod for [*Vin
 - **Configurable Step Height:** Adjust your step height between 0.2 and 2 blocks, making it perfect for varied terrain and playstyles.
 - **Configurable Step Speed:** Adjust your step up speed between 0.5 and 2 speed, allowing a quicker traversal of terrain.
 - **Configurable Blacklist:** Add or remove block codes to the block blacklist, preventing the step-up function for blocks listed.
+- **Configurable SpeedOnlyMode:** Set to true to disable SUA step height allowing XSkills Steeplechaser compatibility with step speed included.
+- **Configurable Ceiling Guard:** Set to true to enable ceiling detection, allowing traversal with a high step height underneath trees/floors without constantly stepping up.
+- **Configurable Forward Ceiling Probe:** Set to true to enable predictive ceiling detection, for if you are running and the Ceiling Guard slips.
 - **Dynamic Toggle:** Enable or disable StepUp functionality in real time with a hotkey. (Default: Insert)
 - **Real-Time Adjustments:** Increase or decrease step height and step speed on the fly using customizable hotkeys ([Step Height] Default: PageUp and PageDown & [Step Speed] Default: ArrowUp and ArrowDown).
 - **Reloadable Configuration:** Easily reload your settings mid-game with a hotkey, without restarting. (Default: Home)

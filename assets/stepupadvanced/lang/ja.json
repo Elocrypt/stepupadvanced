@@ -1,0 +1,79 @@
+{
+  "comment_description": "『StepUp Advanced』日本語ローカライズファイル。",
+  "comment_version": "Mod バージョン: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "コミュニティ、機械翻訳支援",
+  "comment_technical_details": "丁寧すぎない中立的な文体。技術名は英語のまま（StepUp, Harmony, Server API）。{0} はそのまま使用。前後の空白は原文を維持。",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} ブロック ",
+
+  "sua:server-enforcement-on": " サーバー強制は有効です。 ",
+  "sua:server-enforcement-off": " サーバー強制は無効です。 ",
+  "sua:local-settings-enabled": " ローカル設定は有効 ",
+  "sua:local-settings-disabled": " ローカル設定は無効 ",
+
+  "sua:speed-only-mode": " スピードのみモード ",
+  "sua:height-controls-disabled": " 高さの操作は無効 ",
+
+  "sua:server-enforced": " サーバーによる強制 ",
+  "sua:height-change-blocked": " 高さの変更はブロックされています ",
+  "sua:speed-change-blocked": " 速度の変更はブロックされています ",
+
+  "sua:max-height": " 最大高さ ",
+  "sua:min-height": " 最小高さ ",
+  "sua:height": " 高さ ",
+  "sua:speed": " 速度 ",
+  "sua:max-speed": " 最大速度 ",
+  "sua:min-speed": " 最小速度 ",
+
+  "sua:stepup-enabled": " StepUp を有効化 ",
+  "sua:stepup-disabled": " StepUp を無効化 ",
+  "sua:reload-blocked": " リロードはブロックされています ",
+  "sua:config-reloaded": " 設定をリロードしました。 ",
+
+  "sua:cmd.failed": " コマンドに失敗しました。 ",
+  "sua:cmd.must-be-player": " このコマンドを使うにはプレイヤーである必要があります。 ",
+  "sua:cmd.must-be-server-player": " サーバープレイヤーである必要があります。 ",
+  "sua:cmd.no-block-targeted": " ブロックが選択されていません。 ",
+
+  "sua:cmd.already-listed": " すでに登録されています。 ",
+  "sua:cmd.not-listed-client": " クライアントのブラックリストにありません ",
+  "sua:cmd.is-on-blacklist": " はあなたのブラックリストにあります。 ",
+  "sua:cmd.already-listed-server": " サーバーのブラックリストにすでにあります ",
+  "sua:cmd.not-on-server-blacklist": " サーバーのブラックリストにありません ",
+
+  "sua:cmd.added-client-blacklist": " クライアントのブラックリストに追加しました ",
+  "sua:cmd.removed-client-blacklist": " クライアントのブラックリストから削除しました ",
+  "sua:cmd.added-server-blacklist": " サーバーのブラックリストに追加しました ",
+  "sua:cmd.removed-server-blacklist": " サーバーのブラックリストから削除しました ",
+
+  "sua:cmd.blacklisted-blocks-title": " ブラックリストのブロック ",
+  "sua:cmd.none-blacklisted": " 現在、ブラックリストに登録されたブロックはありません。 ",
+
+  "sua:cmd.server-api-not-initialized": " Server API が初期化されていません。 ",
+  "sua:cmd.server-config-reloaded": " サーバー設定をリロードしました。 ",
+  "sua:cmd.pushed": " 配信済み：",
+  "sua:cmd.enforced": " 強制 ",
+  "sua:cmd.config": " 設定を全クライアントへ。 ",
+  "sua:cmd.clients-may-use-local": " クライアントはローカル設定を使用できます。 ",
+
+  "sua:error.stepheight-field-missing": " StepHeight フィールドが見つかりません。 ",
+  "sua:error.stepheight-set-failed": " 高さの設定に失敗しました。 ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' フィールドが見つかりません。速度は Harmony のみで制御されます。 ",
+
+  "sua:desc.sua.client": " クライアントのブラックリストを管理 ",
+  "sua:desc.sua.server": " サーバーのブラックリストを管理 ",
+  "sua:desc.sua.add": " 選択したブロックを StepUp のブラックリストに追加します。 ",
+  "sua:desc.sua.remove": " 選択したブロックを StepUp のブラックリストから削除します。 ",
+  "sua:desc.sua.list": " ブラックリストのブロックを一覧表示します。 ",
+  "sua:desc.sua.reload": " サーバー設定を再読み込みし、全クライアントと同期します。 ",
+
+  "sua:key.increase-height": " ステップの高さを上げる ",
+  "sua:key.decrease-height": " ステップの高さを下げる ",
+  "sua:key.increase-speed": " ステップ速度を上げる ",
+  "sua:key.decrease-speed": " ステップ速度を下げる ",
+  "sua:key.toggle": " StepUp 切り替え ",
+  "sua:key.reload": " 設定をリロード "
+}

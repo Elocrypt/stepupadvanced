@@ -1,0 +1,79 @@
+{
+  "comment_description": "ملف تعريب اللغة العربية لـ 'StepUp Advanced'.",
+  "comment_version": "إصدار المعدّل: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "المجتمع، بمساعدة آلية",
+  "comment_technical_details": "لغة محايدة. الأسماء التقنية تبقى كما هي (StepUp, Harmony, Server API). تم الحفاظ على {0} والمسافات.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} كتل ",
+
+  "sua:server-enforcement-on": " فرض الخادم مُفَعَّل. ",
+  "sua:server-enforcement-off": " فرض الخادم مُعَطَّل. ",
+  "sua:local-settings-enabled": " الإعدادات المحلية مُمكّنة ",
+  "sua:local-settings-disabled": " الإعدادات المحلية مُعَطَّلة ",
+
+  "sua:speed-only-mode": " وضع السرعة فقط ",
+  "sua:height-controls-disabled": " عناصر التحكم في الارتفاع معطّلة ",
+
+  "sua:server-enforced": " مفروض من الخادم ",
+  "sua:height-change-blocked": " تغيير الارتفاع محجوب ",
+  "sua:speed-change-blocked": " تغيير السرعة محجوب ",
+
+  "sua:max-height": " الحد الأقصى للارتفاع ",
+  "sua:min-height": " الحد الأدنى للارتفاع ",
+  "sua:height": " الارتفاع ",
+  "sua:speed": " السرعة ",
+  "sua:max-speed": " الحد الأقصى للسرعة ",
+  "sua:min-speed": " الحد الأدنى للسرعة ",
+
+  "sua:stepup-enabled": " تم تمكين StepUp ",
+  "sua:stepup-disabled": " تم تعطيل StepUp ",
+  "sua:reload-blocked": " إعادة التحميل محجوبة ",
+  "sua:config-reloaded": " تمت إعادة تحميل الإعدادات. ",
+
+  "sua:cmd.failed": " فشل الأمر. ",
+  "sua:cmd.must-be-player": " يجب أن تكون لاعبًا لاستخدام هذا الأمر. ",
+  "sua:cmd.must-be-server-player": " يجب أن تكون لاعب خادم. ",
+  "sua:cmd.no-block-targeted": " لا يوجد بلوك محدد. ",
+
+  "sua:cmd.already-listed": " موجود بالفعل. ",
+  "sua:cmd.not-listed-client": " غير موجود في القائمة السوداء للعميل ",
+  "sua:cmd.is-on-blacklist": " موجود في قائمتك السوداء. ",
+  "sua:cmd.already-listed-server": " موجود بالفعل في القائمة السوداء للخادم ",
+  "sua:cmd.not-on-server-blacklist": " غير موجود في القائمة السوداء للخادم ",
+
+  "sua:cmd.added-client-blacklist": " تمت إضافته إلى القائمة السوداء للعميل ",
+  "sua:cmd.removed-client-blacklist": " تمت إزالته من القائمة السوداء للعميل ",
+  "sua:cmd.added-server-blacklist": " تمت إضافته إلى القائمة السوداء للخادم ",
+  "sua:cmd.removed-server-blacklist": " تمت إزالته من القائمة السوداء للخادم ",
+
+  "sua:cmd.blacklisted-blocks-title": " الكتل المحجوبة ",
+  "sua:cmd.none-blacklisted": " لا توجد كتل محجوبة حاليًا. ",
+
+  "sua:cmd.server-api-not-initialized": " لم يتم تهيئة Server API. ",
+  "sua:cmd.server-config-reloaded": " تمت إعادة تحميل إعدادات الخادم. ",
+  "sua:cmd.pushed": " تم دفع ",
+  "sua:cmd.enforced": " مُفْرَضَة ",
+  "sua:cmd.config": " الإعدادات إلى جميع العملاء. ",
+  "sua:cmd.clients-may-use-local": " يمكن للعملاء الآن استخدام الإعدادات المحلية. ",
+
+  "sua:error.stepheight-field-missing": " لم يتم العثور على حقل StepHeight. ",
+  "sua:error.stepheight-set-failed": " فشل تعيين الارتفاع. ",
+  "sua:warn.elevatefactor-field-missing": " لم يتم العثور على 'elevateFactor'؛ يتم التحكم في السرعة عبر Harmony فقط. ",
+
+  "sua:desc.sua.client": " إدارة القائمة السوداء للعميل ",
+  "sua:desc.sua.server": " إدارة القائمة السوداء للخادم ",
+  "sua:desc.sua.add": " يضيف البلوك المحدد إلى قائمة StepUp السوداء. ",
+  "sua:desc.sua.remove": " يزيل البلوك المحدد من قائمة StepUp السوداء. ",
+  "sua:desc.sua.list": " يسرد جميع الكتل المحجوبة. ",
+  "sua:desc.sua.reload": " يعيد تحميل إعدادات الخادم ويزامن مع جميع العملاء. ",
+
+  "sua:key.increase-height": " زيادة ارتفاع الخطوة ",
+  "sua:key.decrease-height": " تقليل ارتفاع الخطوة ",
+  "sua:key.increase-speed": " زيادة سرعة الخطوة ",
+  "sua:key.decrease-speed": " تقليل سرعة الخطوة ",
+  "sua:key.toggle": " تبديل StepUp ",
+  "sua:key.reload": " إعادة تحميل الإعدادات "
+}

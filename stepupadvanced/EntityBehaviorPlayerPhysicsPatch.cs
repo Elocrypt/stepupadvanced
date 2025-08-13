@@ -1,91 +1,102 @@
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using HarmonyLib;
-using stepupadvanced;
-using Vintagestory.API.Common;
-using Vintagestory.API.Common.Entities;
-using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
-[HarmonyPatch(typeof(EntityBehaviorPlayerPhysics), "TryStepSmooth")]
-[HarmonyPatch(new Type[]
+namespace stepupadvanced
 {
-	typeof(EntityControls),
-	typeof(EntityPos),
-	typeof(Vec2d),
-	typeof(float),
-	typeof(List<Cuboidd>),
-	typeof(Cuboidd)
-})]
-public static class EntityBehaviorPlayerPhysicsPatch
-{
-	public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-	{
-		Console.WriteLine("[StepUp Advanced] Transpiler applied to TryStepSmooth.");
-		List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
-		for (int i = 0; i < codes.Count; i++)
-		{
-			if (codes[i].opcode == OpCodes.Ldc_R8 && Math.Abs((double)codes[i].operand - 0.1) < 0.0001)
-			{
-				Console.WriteLine($"[StepUp Advanced] Replacing 0.10 (sprint factor) at index {i}");
-				MethodInfo method = typeof(EntityBehaviorPlayerPhysicsPatch).GetMethod("GetSprintElevateFactor", BindingFlags.Static | BindingFlags.Public);
-				if (method == null)
-				{
-					throw new Exception("[StepUp Advanced] GetSprintElevateFactor method not found!");
-				}
-				CodeInstruction newInstruction = new CodeInstruction(OpCodes.Call, method);
-				newInstruction.labels.AddRange(codes[i].labels);
-				codes[i] = newInstruction;
-			}
-			else if (codes[i].opcode == OpCodes.Ldc_R8 && Math.Abs((double)codes[i].operand - 0.025) < 0.0001)
-			{
-				Console.WriteLine($"[StepUp Advanced] Replacing 0.025 (sneak factor) at index {i}");
-				MethodInfo method2 = typeof(EntityBehaviorPlayerPhysicsPatch).GetMethod("GetSneakElevateFactor", BindingFlags.Static | BindingFlags.Public);
-				if (method2 == null)
-				{
-					throw new Exception("[StepUp Advanced] GetSneakElevateFactor method not found!");
-				}
-				CodeInstruction newInstruction2 = new CodeInstruction(OpCodes.Call, method2);
-				newInstruction2.labels.AddRange(codes[i].labels);
-				codes[i] = newInstruction2;
-			}
-			else if (codes[i].opcode == OpCodes.Ldc_R8 && Math.Abs((double)codes[i].operand - 0.05) < 0.0001)
-			{
-				Console.WriteLine($"[StepUp Advanced] Replacing 0.05 (default factor) at index {i}");
-				MethodInfo method3 = typeof(EntityBehaviorPlayerPhysicsPatch).GetMethod("GetDefaultElevateFactor", BindingFlags.Static | BindingFlags.Public);
-				if (method3 == null)
-				{
-					throw new Exception("[StepUp Advanced] GetDefaultElevateFactor method not found!");
-				}
-				CodeInstruction newInstruction3 = new CodeInstruction(OpCodes.Call, method3);
-				newInstruction3.labels.AddRange(codes[i].labels);
-				codes[i] = newInstruction3;
-			}
-		}
-		return codes.AsEnumerable();
-	}
+    // Patch the player's smooth step constants (sneak/default/sprint elevate)
+    [HarmonyPatch(typeof(EntityBehaviorPlayerPhysics), "TryStepSmooth")]
+    public static class EntityBehaviorPlayerPhysicsPatch
+    {
+        // float-returning (for ldc.r4 sites)
+        public static float GetSneakElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.025);
+        public static float GetDefaultElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.05);
+        public static float GetSprintElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.10);
 
-    public static double GetSprintElevateFactor()
-	{
-		double factor = (double)StepUpAdvancedConfig.Current.StepSpeed * 0.1;
-		Console.WriteLine($"[StepUp Advanced] Sprint Elevate Factor: {factor}");
-		return factor;
-	}
+        // double-returning (for ldc.r8 sites)
+        public static double GetSneakElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.025;
+        public static double GetDefaultElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.05;
+        public static double GetSprintElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.10;
 
-    public static double GetSneakElevateFactor()
-	{
-		double factor = (double)StepUpAdvancedConfig.Current.StepSpeed * 0.025;
-		Console.WriteLine($"[StepUp Advanced] Sneak Elevate Factor: {factor}");
-		return factor;
-	}
+        private static bool Approx(float a, float b) => Math.Abs(a - b) < 1e-6f;
+        private static bool Approx(double a, double b) => Math.Abs(a - b) < 1e-8;
 
-	public static double GetDefaultElevateFactor()
-	{
-		double factor = (double)StepUpAdvancedConfig.Current.StepSpeed * 0.05;
-		Console.WriteLine($"[StepUp Advanced] Default Elevate Factor: {factor}");
-		return factor;
-	}
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var list = new List<CodeInstruction>(instructions);
+            bool replacedAny = false;
+
+            var fSneak = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetSneakElevateF));
+            var fDefault = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetDefaultElevateF));
+            var fSprint = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetSprintElevateF));
+
+            var dSneak = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetSneakElevateD));
+            var dDefault = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetDefaultElevateD));
+            var dSprint = AccessTools.Method(typeof(EntityBehaviorPlayerPhysicsPatch), nameof(GetSprintElevateD));
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var ins = list[i];
+
+                try
+                {
+                    // FLOAT sites (ldc.r4)
+                    if (ins.opcode == OpCodes.Ldc_R4 && ins.operand is float f)
+                    {
+                        MethodInfo target = null;
+                        if (Approx(f, 0.025f)) target = fSneak;
+                        else if (Approx(f, 0.05f)) target = fDefault;
+                        else if (Approx(f, 0.10f)) target = fSprint;
+
+                        if (target != null)
+                        {
+                            var repl = new CodeInstruction(OpCodes.Call, target);
+                            if (ins.labels != null && ins.labels.Count > 0) repl.labels.AddRange(ins.labels);
+                            if (ins.blocks != null && ins.blocks.Count > 0) repl.blocks.AddRange(ins.blocks);
+                            list[i] = repl;
+                            replacedAny = true;
+                            continue;
+                        }
+                    }
+
+                    // DOUBLE sites (ldc.r8)
+                    if (ins.opcode == OpCodes.Ldc_R8 && ins.operand is double d)
+                    {
+                        MethodInfo target = null;
+                        if (Approx(d, 0.025)) target = dSneak;
+                        else if (Approx(d, 0.05)) target = dDefault;
+                        else if (Approx(d, 0.10)) target = dSprint;
+
+                        if (target != null)
+                        {
+                            var repl = new CodeInstruction(OpCodes.Call, target);
+                            if (ins.labels != null && ins.labels.Count > 0) repl.labels.AddRange(ins.labels);
+                            if (ins.blocks != null && ins.blocks.Count > 0) repl.blocks.AddRange(ins.blocks);
+                            list[i] = repl;
+                            replacedAny = true;
+                            continue;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[StepUp Advanced] Transpiler guard at i={i}: {ex.Message}");
+                    return instructions;
+                }
+            }
+
+            if (!replacedAny)
+            {
+                Console.WriteLine("[StepUp Advanced] TryStepSmooth constants not found; leaving method unmodified.");
+                return instructions;
+            }
+
+            Console.WriteLine("[StepUp Advanced] TryStepSmooth elevate constants successfully swapped.");
+            return list.AsEnumerable();
+        }
+    }
 }

@@ -1,0 +1,79 @@
+{
+  "comment_description": "“StepUp Advanced” 简体中文本地化文件。",
+  "comment_version": "模组版本：v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "社区，机器协助",
+  "comment_technical_details": "保持中性语气。技术名未翻译（StepUp、Harmony、Server API）。{0} 占位符保留。保留前后空格。",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} 方块 ",
+
+  "sua:server-enforcement-on": " 服务器强制 已启用。 ",
+  "sua:server-enforcement-off": " 服务器强制 已关闭。 ",
+  "sua:local-settings-enabled": " 本地设置已启用 ",
+  "sua:local-settings-disabled": " 本地设置已禁用 ",
+
+  "sua:speed-only-mode": " 仅速度模式 ",
+  "sua:height-controls-disabled": " 高度控制已禁用 ",
+
+  "sua:server-enforced": " 由服务器强制 ",
+  "sua:height-change-blocked": " 高度更改已被阻止 ",
+  "sua:speed-change-blocked": " 速度更改已被阻止 ",
+
+  "sua:max-height": " 最大高度 ",
+  "sua:min-height": " 最小高度 ",
+  "sua:height": " 高度 ",
+  "sua:speed": " 速度 ",
+  "sua:max-speed": " 最大速度 ",
+  "sua:min-speed": " 最小速度 ",
+
+  "sua:stepup-enabled": " StepUp 已启用 ",
+  "sua:stepup-disabled": " StepUp 已禁用 ",
+  "sua:reload-blocked": " 重新加载已被阻止 ",
+  "sua:config-reloaded": " 配置已重新加载。 ",
+
+  "sua:cmd.failed": " 命令失败。 ",
+  "sua:cmd.must-be-player": " 你必须是玩家才能使用此命令。 ",
+  "sua:cmd.must-be-server-player": " 必须为服务器玩家。 ",
+  "sua:cmd.no-block-targeted": " 未选择方块。 ",
+
+  "sua:cmd.already-listed": " 已在列表中。 ",
+  "sua:cmd.not-listed-client": " 不在客户端黑名单中 ",
+  "sua:cmd.is-on-blacklist": " 已在你的黑名单中。 ",
+  "sua:cmd.already-listed-server": " 已在服务器黑名单中 ",
+  "sua:cmd.not-on-server-blacklist": " 不在服务器黑名单中 ",
+
+  "sua:cmd.added-client-blacklist": " 已添加到客户端黑名单 ",
+  "sua:cmd.removed-client-blacklist": " 已从客户端黑名单移除 ",
+  "sua:cmd.added-server-blacklist": " 已添加到服务器黑名单 ",
+  "sua:cmd.removed-server-blacklist": " 已从服务器黑名单移除 ",
+
+  "sua:cmd.blacklisted-blocks-title": " 黑名单方块 ",
+  "sua:cmd.none-blacklisted": " 当前没有方块在黑名单中。 ",
+
+  "sua:cmd.server-api-not-initialized": " Server API 未初始化。 ",
+  "sua:cmd.server-config-reloaded": " 服务器配置已重新加载。 ",
+  "sua:cmd.pushed": " 已推送 ",
+  "sua:cmd.enforced": " 强制 ",
+  "sua:cmd.config": " 配置到所有客户端。 ",
+  "sua:cmd.clients-may-use-local": " 客户端现在可以使用本地配置。 ",
+
+  "sua:error.stepheight-field-missing": " 未找到 StepHeight 字段。 ",
+  "sua:error.stepheight-set-failed": " 设置高度失败。 ",
+  "sua:warn.elevatefactor-field-missing": " 未找到 'elevateFactor' 字段；速度仅由 Harmony 控制。 ",
+
+  "sua:desc.sua.client": " 管理客户端黑名单 ",
+  "sua:desc.sua.server": " 管理服务器黑名单 ",
+  "sua:desc.sua.add": " 将所选方块加入 StepUp 黑名单。 ",
+  "sua:desc.sua.remove": " 将所选方块从 StepUp 黑名单移除。 ",
+  "sua:desc.sua.list": " 列出所有在黑名单中的方块。 ",
+  "sua:desc.sua.reload": " 重新加载服务器配置并同步到所有客户端。 ",
+
+  "sua:key.increase-height": " 提高踏步高度 ",
+  "sua:key.decrease-height": " 降低踏步高度 ",
+  "sua:key.increase-speed": " 提高踏步速度 ",
+  "sua:key.decrease-speed": " 降低踏步速度 ",
+  "sua:key.toggle": " 切换 StepUp ",
+  "sua:key.reload": " 重新加载配置 "
+}

@@ -1,0 +1,79 @@
+{
+  "comment_description": "‘StepUp Advanced’ 한국어 현지화 파일.",
+  "comment_version": "모드 버전: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "커뮤니티, 기계 번역 지원",
+  "comment_technical_details": "중립적 어조. 기술명 미번역(StepUp, Harmony, Server API). {0} 유지. 공백 유지.",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} 블록 ",
+
+  "sua:server-enforcement-on": " 서버 강제 적용 켬. ",
+  "sua:server-enforcement-off": " 서버 강제 적용 끔. ",
+  "sua:local-settings-enabled": " 로컬 설정 사용 가능 ",
+  "sua:local-settings-disabled": " 로컬 설정 사용 불가 ",
+
+  "sua:speed-only-mode": " 속도 전용 모드 ",
+  "sua:height-controls-disabled": " 높이 제어 비활성화됨 ",
+
+  "sua:server-enforced": " 서버에서 강제 ",
+  "sua:height-change-blocked": " 높이 변경이 차단됨 ",
+  "sua:speed-change-blocked": " 속도 변경이 차단됨 ",
+
+  "sua:max-height": " 최대 높이 ",
+  "sua:min-height": " 최소 높이 ",
+  "sua:height": " 높이 ",
+  "sua:speed": " 속도 ",
+  "sua:max-speed": " 최대 속도 ",
+  "sua:min-speed": " 최소 속도 ",
+
+  "sua:stepup-enabled": " StepUp 사용 ",
+  "sua:stepup-disabled": " StepUp 사용 안 함 ",
+  "sua:reload-blocked": " 다시 불러오기 차단됨 ",
+  "sua:config-reloaded": " 설정을 다시 불러왔습니다. ",
+
+  "sua:cmd.failed": " 명령 실패. ",
+  "sua:cmd.must-be-player": " 이 명령을 사용하려면 플레이어여야 합니다. ",
+  "sua:cmd.must-be-server-player": " 서버 플레이어여야 합니다. ",
+  "sua:cmd.no-block-targeted": " 선택된 블록이 없습니다. ",
+
+  "sua:cmd.already-listed": " 이미 목록에 있습니다. ",
+  "sua:cmd.not-listed-client": " 클라이언트 차단 목록에 없음 ",
+  "sua:cmd.is-on-blacklist": " 가(이) 당신의 차단 목록에 있습니다. ",
+  "sua:cmd.already-listed-server": " 서버 차단 목록에 이미 있음 ",
+  "sua:cmd.not-on-server-blacklist": " 서버 차단 목록에 없음 ",
+
+  "sua:cmd.added-client-blacklist": " 클라이언트 차단 목록에 추가됨 ",
+  "sua:cmd.removed-client-blacklist": " 클라이언트 차단 목록에서 제거됨 ",
+  "sua:cmd.added-server-blacklist": " 서버 차단 목록에 추가됨 ",
+  "sua:cmd.removed-server-blacklist": " 서버 차단 목록에서 제거됨 ",
+
+  "sua:cmd.blacklisted-blocks-title": " 차단된 블록 ",
+  "sua:cmd.none-blacklisted": " 현재 차단된 블록이 없습니다. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API가 초기화되지 않았습니다. ",
+  "sua:cmd.server-config-reloaded": " 서버 설정을 다시 불러왔습니다. ",
+  "sua:cmd.pushed": " 전송됨 ",
+  "sua:cmd.enforced": " 강제 ",
+  "sua:cmd.config": " 설정을 모든 클라이언트로. ",
+  "sua:cmd.clients-may-use-local": " 이제 클라이언트가 로컬 설정을 사용할 수 있습니다. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight 필드를 찾을 수 없습니다. ",
+  "sua:error.stepheight-set-failed": " 높이 설정 실패. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' 필드를 찾을 수 없음; 속도는 Harmony로만 제어됩니다. ",
+
+  "sua:desc.sua.client": " 클라이언트 차단 목록 관리 ",
+  "sua:desc.sua.server": " 서버 차단 목록 관리 ",
+  "sua:desc.sua.add": " 선택한 블록을 StepUp 차단 목록에 추가합니다. ",
+  "sua:desc.sua.remove": " 선택한 블록을 StepUp 차단 목록에서 제거합니다. ",
+  "sua:desc.sua.list": " 차단된 블록을 모두 표시합니다. ",
+  "sua:desc.sua.reload": " 서버 설정을 다시 불러와 모든 클라이언트와 동기화합니다. ",
+
+  "sua:key.increase-height": " 스텝 높이 증가 ",
+  "sua:key.decrease-height": " 스텝 높이 감소 ",
+  "sua:key.increase-speed": " 스텝 속도 증가 ",
+  "sua:key.decrease-speed": " 스텝 속도 감소 ",
+  "sua:key.toggle": " StepUp 전환 ",
+  "sua:key.reload": " 설정 다시 불러오기 "
+}

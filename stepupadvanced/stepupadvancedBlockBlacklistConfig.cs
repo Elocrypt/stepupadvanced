@@ -5,7 +5,6 @@ using Vintagestory.API.Client;
 public class BlockBlacklistConfig
 {
     public List<string> BlockCodes { get; set; } = new List<string>();
-    //public bool UseWhitelistMode { get; set; } = false;
 
     public static BlockBlacklistConfig Current { get; private set; } = new();
 

@@ -1,0 +1,79 @@
+{
+  "comment_description": "Archivo de localización en español para 'StepUp Advanced'.",
+  "comment_version": "Versión del mod: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Comunidad, asistencia automática",
+  "comment_technical_details": "Registro neutro. Términos técnicos sin traducir (StepUp, Harmony, Server API). {0} se mantiene. Espacios conservados.",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} bloques ",
+
+  "sua:server-enforcement-on": " Aplicación del servidor ACTIVADA. ",
+  "sua:server-enforcement-off": " Aplicación del servidor DESACTIVADA. ",
+  "sua:local-settings-enabled": " Ajustes locales habilitados ",
+  "sua:local-settings-disabled": " Ajustes locales deshabilitados ",
+
+  "sua:speed-only-mode": " Modo solo velocidad ",
+  "sua:height-controls-disabled": " Controles de altura deshabilitados ",
+
+  "sua:server-enforced": " Forzado por el servidor ",
+  "sua:height-change-blocked": " Cambio de altura bloqueado ",
+  "sua:speed-change-blocked": " Cambio de velocidad bloqueado ",
+
+  "sua:max-height": " Altura máxima ",
+  "sua:min-height": " Altura mínima ",
+  "sua:height": " Altura ",
+  "sua:speed": " Velocidad ",
+  "sua:max-speed": " Velocidad máxima ",
+  "sua:min-speed": " Velocidad mínima ",
+
+  "sua:stepup-enabled": " StepUp habilitado ",
+  "sua:stepup-disabled": " StepUp deshabilitado ",
+  "sua:reload-blocked": " Recarga bloqueada ",
+  "sua:config-reloaded": " Configuración recargada. ",
+
+  "sua:cmd.failed": " Fallo del comando. ",
+  "sua:cmd.must-be-player": " Debes ser jugador para usar este comando. ",
+  "sua:cmd.must-be-server-player": " Debe ser un jugador del servidor. ",
+  "sua:cmd.no-block-targeted": " Ningún bloque seleccionado. ",
+
+  "sua:cmd.already-listed": " Ya está en la lista. ",
+  "sua:cmd.not-listed-client": " No está en la lista negra del cliente ",
+  "sua:cmd.is-on-blacklist": " está en tu lista negra. ",
+  "sua:cmd.already-listed-server": " Ya está en la lista negra del servidor ",
+  "sua:cmd.not-on-server-blacklist": " No está en la lista negra del servidor ",
+
+  "sua:cmd.added-client-blacklist": " Añadido a la lista negra del cliente ",
+  "sua:cmd.removed-client-blacklist": " Eliminado de la lista negra del cliente ",
+  "sua:cmd.added-server-blacklist": " Añadido a la lista negra del servidor ",
+  "sua:cmd.removed-server-blacklist": " Eliminado de la lista negra del servidor ",
+
+  "sua:cmd.blacklisted-blocks-title": " Bloques en lista negra ",
+  "sua:cmd.none-blacklisted": " No hay bloques en la lista negra actualmente. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API no inicializada. ",
+  "sua:cmd.server-config-reloaded": " Configuración del servidor recargada. ",
+  "sua:cmd.pushed": " Enviada ",
+  "sua:cmd.enforced": " FORZADA ",
+  "sua:cmd.config": " configuración a todos los clientes. ",
+  "sua:cmd.clients-may-use-local": " Los clientes ahora pueden usar la configuración local. ",
+
+  "sua:error.stepheight-field-missing": " Campo StepHeight no encontrado. ",
+  "sua:error.stepheight-set-failed": " Error al establecer la altura. ",
+  "sua:warn.elevatefactor-field-missing": " Campo 'elevateFactor' no encontrado; la velocidad se controla solo mediante Harmony. ",
+
+  "sua:desc.sua.client": " Gestionar la lista negra del cliente ",
+  "sua:desc.sua.server": " Gestionar la lista negra del servidor ",
+  "sua:desc.sua.add": " Añade el bloque seleccionado a la lista negra de StepUp. ",
+  "sua:desc.sua.remove": " Elimina el bloque seleccionado de la lista negra de StepUp. ",
+  "sua:desc.sua.list": " Lista todos los bloques en la lista negra. ",
+  "sua:desc.sua.reload": " Recarga la configuración del servidor y la sincroniza con todos los clientes. ",
+
+  "sua:key.increase-height": " Aumentar altura del paso ",
+  "sua:key.decrease-height": " Disminuir altura del paso ",
+  "sua:key.increase-speed": " Aumentar velocidad del paso ",
+  "sua:key.decrease-speed": " Disminuir velocidad del paso ",
+  "sua:key.toggle": " Alternar StepUp ",
+  "sua:key.reload": " Recargar configuración "
+}
