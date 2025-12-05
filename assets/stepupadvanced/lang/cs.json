@@ -1,0 +1,79 @@
+{
+  "comment_description": "Český soubor lokalizace pro 'StepUp Advanced'.",
+  "comment_version": "Verze modu: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Komunita, strojově asistované",
+  "comment_technical_details": "Neutrální styl. Zachovány technické názvy (StepUp, Harmony, Server API). {0} zachováno. Ponechány mezery.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} bloků ",
+
+  "sua:server-enforcement-on": " Vynucení serverem ZAPNUTO. ",
+  "sua:server-enforcement-off": " Vynucení serverem VYPNUTO. ",
+  "sua:local-settings-enabled": " Místní nastavení povolena ",
+  "sua:local-settings-disabled": " Místní nastavení zakázána ",
+
+  "sua:speed-only-mode": " Režim pouze rychlost ",
+  "sua:height-controls-disabled": " Ovládání výšky zakázáno ",
+
+  "sua:server-enforced": " Vynuceno serverem ",
+  "sua:height-change-blocked": " Změna výšky zablokována ",
+  "sua:speed-change-blocked": " Změna rychlosti zablokována ",
+
+  "sua:max-height": " Maximální výška ",
+  "sua:min-height": " Minimální výška ",
+  "sua:height": " Výška ",
+  "sua:speed": " Rychlost ",
+  "sua:max-speed": " Maximální rychlost ",
+  "sua:min-speed": " Minimální rychlost ",
+
+  "sua:stepup-enabled": " StepUp povolen ",
+  "sua:stepup-disabled": " StepUp zakázán ",
+  "sua:reload-blocked": " Obnovení zablokováno ",
+  "sua:config-reloaded": " Konfigurace znovu načtena. ",
+
+  "sua:cmd.failed": " Příkaz selhal. ",
+  "sua:cmd.must-be-player": " Pro použití tohoto příkazu musíte být hráč. ",
+  "sua:cmd.must-be-server-player": " Musí být hráč na serveru. ",
+  "sua:cmd.no-block-targeted": " Není vybrán žádný blok. ",
+
+  "sua:cmd.already-listed": " Již uvedeno. ",
+  "sua:cmd.not-listed-client": " Není na klientském blacklistu ",
+  "sua:cmd.is-on-blacklist": " je na vašem blacklistu. ",
+  "sua:cmd.already-listed-server": " Již na serverovém blacklistu ",
+  "sua:cmd.not-on-server-blacklist": " Není na serverovém blacklistu ",
+
+  "sua:cmd.added-client-blacklist": " Přidáno na klientský blacklist ",
+  "sua:cmd.removed-client-blacklist": " Odebráno z klientského blacklistu ",
+  "sua:cmd.added-server-blacklist": " Přidáno na serverový blacklist ",
+  "sua:cmd.removed-server-blacklist": " Odebráno ze serverového blacklistu ",
+
+  "sua:cmd.blacklisted-blocks-title": " Bloky na blacklistu ",
+  "sua:cmd.none-blacklisted": " Aktuálně nejsou žádné bloky na blacklistu. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API není inicializováno. ",
+  "sua:cmd.server-config-reloaded": " Konfigurace serveru znovu načtena. ",
+  "sua:cmd.pushed": " Odeslána ",
+  "sua:cmd.enforced": " VYNUCENÁ ",
+  "sua:cmd.config": " konfigurace všem klientům. ",
+  "sua:cmd.clients-may-use-local": " Klienti nyní mohou používat místní konfiguraci. ",
+
+  "sua:error.stepheight-field-missing": " Pole StepHeight nebylo nalezeno. ",
+  "sua:error.stepheight-set-failed": " Nastavení výšky se nezdařilo. ",
+  "sua:warn.elevatefactor-field-missing": " Pole 'elevateFactor' nenalezeno; rychlost je řízena pouze přes Harmony. ",
+
+  "sua:desc.sua.client": " Spravovat klientský blacklist ",
+  "sua:desc.sua.server": " Spravovat serverový blacklist ",
+  "sua:desc.sua.add": " Přidá vybraný blok na blacklist StepUp. ",
+  "sua:desc.sua.remove": " Odebere vybraný blok z blacklistu StepUp. ",
+  "sua:desc.sua.list": " Vypíše všechny bloky na blacklistu. ",
+  "sua:desc.sua.reload": " Znovu načte konfiguraci serveru a synchronizuje s klienty. ",
+
+  "sua:key.increase-height": " Zvýšit výšku kroku ",
+  "sua:key.decrease-height": " Snížit výšku kroku ",
+  "sua:key.increase-speed": " Zvýšit rychlost kroku ",
+  "sua:key.decrease-speed": " Snížit rychlost kroku ",
+  "sua:key.toggle": " Přepnout StepUp ",
+  "sua:key.reload": " Znovu načíst konfiguraci "
+}

@@ -1,0 +1,79 @@
+{
+  "comment_description": "Deutsche Übersetzungsdatei für 'StepUp Advanced'.",
+  "comment_version": "Mod Version: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Community, machine-assisted",
+  "comment_technical_details": "Neutraler Ton, IT-Begriffe beibehalten (StepUp, Harmony, Server API). Plural bei {0} als 'Blöcke'. Vor-/Nachlauf-Leerzeichen aus dem Original beibehalten.",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} Blöcke ",
+
+  "sua:server-enforcement-on": " Server-Erzwingung AKTIV. ",
+  "sua:server-enforcement-off": " Server-Erzwingung AUS. ",
+  "sua:local-settings-enabled": " Lokale Einstellungen aktiviert ",
+  "sua:local-settings-disabled": " Lokale Einstellungen deaktiviert ",
+
+  "sua:speed-only-mode": " Nur-Geschwindigkeit-Modus ",
+  "sua:height-controls-disabled": " Höhensteuerung deaktiviert ",
+
+  "sua:server-enforced": " Server erzwingt ",
+  "sua:height-change-blocked": " Höhenänderung blockiert ",
+  "sua:speed-change-blocked": " Geschwindigkeitsänderung blockiert ",
+
+  "sua:max-height": " Maximale Höhe ",
+  "sua:min-height": " Minimale Höhe ",
+  "sua:height": " Höhe ",
+  "sua:speed": " Geschwindigkeit ",
+  "sua:max-speed": " Maximale Geschwindigkeit ",
+  "sua:min-speed": " Minimale Geschwindigkeit ",
+
+  "sua:stepup-enabled": " StepUp aktiviert ",
+  "sua:stepup-disabled": " StepUp deaktiviert ",
+  "sua:reload-blocked": " Neu laden blockiert ",
+  "sua:config-reloaded": " Konfiguration neu geladen. ",
+
+  "sua:cmd.failed": " Befehl fehlgeschlagen. ",
+  "sua:cmd.must-be-player": " Du musst Spieler sein, um diesen Befehl zu verwenden. ",
+  "sua:cmd.must-be-server-player": " Muss ein Server-Spieler sein. ",
+  "sua:cmd.no-block-targeted": " Kein Block anvisiert. ",
+
+  "sua:cmd.already-listed": " Bereits eingetragen. ",
+  "sua:cmd.not-listed-client": " Nicht in der Client-Blockliste eingetragen ",
+  "sua:cmd.is-on-blacklist": " steht auf deiner Blockliste. ",
+  "sua:cmd.already-listed-server": " Bereits in der Server-Blockliste eingetragen ",
+  "sua:cmd.not-on-server-blacklist": " Nicht auf der Server-Blockliste ",
+
+  "sua:cmd.added-client-blacklist": " Zur Client-Blockliste hinzugefügt ",
+  "sua:cmd.removed-client-blacklist": " Von der Client-Blockliste entfernt ",
+  "sua:cmd.added-server-blacklist": " Zur Server-Blockliste hinzugefügt ",
+  "sua:cmd.removed-server-blacklist": " Von der Server-Blockliste entfernt ",
+
+  "sua:cmd.blacklisted-blocks-title": " Blockierte Blöcke ",
+  "sua:cmd.none-blacklisted": " Derzeit sind keine Blöcke blockiert. ",
+
+  "sua:cmd.server-api-not-initialized": " Server-API nicht initialisiert. ",
+  "sua:cmd.server-config-reloaded": " Serverkonfiguration neu geladen. ",
+  "sua:cmd.pushed": " Übertragen ",
+  "sua:cmd.enforced": " ERZWUNGENE ",
+  "sua:cmd.config": " Konfiguration an alle Clients. ",
+  "sua:cmd.clients-may-use-local": " Clients dürfen nun lokale Konfiguration verwenden. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight-Feld nicht gefunden. ",
+  "sua:error.stepheight-set-failed": " Festlegen der Höhe fehlgeschlagen. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' nicht gefunden; StepSpeed wird nur über Harmony gesteuert. ",
+
+  "sua:desc.sua.client": " Client-Blockliste verwalten ",
+  "sua:desc.sua.server": " Server-Blockliste verwalten ",
+  "sua:desc.sua.add": " Fügt den anvisierten Block der StepUp-Blockliste hinzu. ",
+  "sua:desc.sua.remove": " Entfernt den anvisierten Block aus der StepUp-Blockliste. ",
+  "sua:desc.sua.list": " Listet alle blockierten Blöcke auf. ",
+  "sua:desc.sua.reload": " Lädt die Serverkonfiguration neu und synchronisiert alle Clients. ",
+
+  "sua:key.increase-height": " Schritt-Höhe erhöhen ",
+  "sua:key.decrease-height": " Schritt-Höhe verringern ",
+  "sua:key.increase-speed": " Schritt-Geschwindigkeit erhöhen ",
+  "sua:key.decrease-speed": " Schritt-Geschwindigkeit verringern ",
+  "sua:key.toggle": " StepUp umschalten ",
+  "sua:key.reload": " Konfiguration neu laden "
+}

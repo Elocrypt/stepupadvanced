@@ -1,3 +1,4 @@
+ï»¿using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +36,7 @@ static class SuaChat
     public static string Err(string t) => Bold(Font(t, CBad));
     public static string Val(string t) => Bold(Font(t, CValue));
     public static string Muted(string t) => Font(t, CMuted);
-    public static string Arrow => Muted("» ");
+    public static string Arrow => Muted("Â» ");
 
     public static void Client(ICoreClientAPI capi, string msg) 
     { 
@@ -63,7 +64,7 @@ static class SuaCmd
 
     public static TextCommandResult List(string title, IEnumerable<string> items)
     {
-        var body = string.Join("\n", items.Select(i => $"• {SuaChat.Val(i)}"));
+        var body = string.Join("\n", items.Select(i => $"â€¢ {SuaChat.Val(i)}"));
         return TextCommandResult.Success($"{SuaChat.Tag} {SuaChat.Bold(SuaChat.Font(title, SuaChat.CList))}\n{body}");
     }
 }
@@ -481,7 +482,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownHeightDisabled)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} – {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} â€“ {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
                 hasShownHeightDisabled = true;
             }
             return false;
@@ -492,7 +493,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownMaxEMessage)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} â€“ {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
                 hasShownMaxEMessage = true;
             }
             return false;
@@ -530,7 +531,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownHeightDisabled)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} – {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} â€“ {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
                 hasShownHeightDisabled = true;
             }
             return false;
@@ -541,7 +542,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownMinEMessage)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} â€“ {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
                 hasShownMinEMessage = true;
             }
             return false;
@@ -584,7 +585,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownMaxEMessage)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} â€“ {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
                 hasShownMaxEMessage = true;
             }
             return false;
@@ -621,7 +622,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownMinEMessage)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} â€“ {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
                 hasShownMinEMessage = true;
             }
             return false;
@@ -680,7 +681,7 @@ public class StepUpAdvancedModSystem : ModSystem
         {
             if (!hasShownMaxMessage)
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("reload-blocked"))}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} â€“ {SuaChat.Muted(SuaChat.L("reload-blocked"))}");
                 hasShownMaxMessage = true;
             }
             return false;

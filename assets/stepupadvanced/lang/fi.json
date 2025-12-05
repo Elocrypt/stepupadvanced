@@ -1,0 +1,79 @@
+{
+  "comment_description": "Suomenkielinen lokalisointitiedosto modille 'StepUp Advanced'.",
+  "comment_version": "Modin versio: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Yhteisö, koneavusteinen",
+  "comment_technical_details": "Neutraali tyyli. Tekniset nimet säilytetty (StepUp, Harmony, Server API). {0} säilytetty. Välilyönnit säilytetty.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} lohkoa ",
+
+  "sua:server-enforcement-on": " Palvelimen pakotus PÄÄLLÄ. ",
+  "sua:server-enforcement-off": " Palvelimen pakotus POIS PÄÄLTÄ. ",
+  "sua:local-settings-enabled": " Paikalliset asetukset käytössä ",
+  "sua:local-settings-disabled": " Paikalliset asetukset pois käytöstä ",
+
+  "sua:speed-only-mode": " Vain nopeus -tila ",
+  "sua:height-controls-disabled": " Korkeuden säätö pois käytöstä ",
+
+  "sua:server-enforced": " Palvelimen pakottama ",
+  "sua:height-change-blocked": " Korkeuden muutos estetty ",
+  "sua:speed-change-blocked": " Nopeuden muutos estetty ",
+
+  "sua:max-height": " Enimmäiskorkeus ",
+  "sua:min-height": " Vähimmäiskorkeus ",
+  "sua:height": " Korkeus ",
+  "sua:speed": " Nopeus ",
+  "sua:max-speed": " Enimmäisnopeus ",
+  "sua:min-speed": " Vähimmäisnopeus ",
+
+  "sua:stepup-enabled": " StepUp käytössä ",
+  "sua:stepup-disabled": " StepUp pois käytöstä ",
+  "sua:reload-blocked": " Uudelleenlataus estetty ",
+  "sua:config-reloaded": " Kokoonpano ladattu uudelleen. ",
+
+  "sua:cmd.failed": " Komento epäonnistui. ",
+  "sua:cmd.must-be-player": " Sinun täytyy olla pelaaja käyttääksesi tätä komentoa. ",
+  "sua:cmd.must-be-server-player": " Täytyy olla palvelimen pelaaja. ",
+  "sua:cmd.no-block-targeted": " Lohkoa ei valittu. ",
+
+  "sua:cmd.already-listed": " Jo listalla. ",
+  "sua:cmd.not-listed-client": " Ei asiakkaan estolistalla ",
+  "sua:cmd.is-on-blacklist": " on estolistallasi. ",
+  "sua:cmd.already-listed-server": " Jo palvelimen estolistalla ",
+  "sua:cmd.not-on-server-blacklist": " Ei palvelimen estolistalla ",
+
+  "sua:cmd.added-client-blacklist": " Lisätty asiakkaan estolistalle ",
+  "sua:cmd.removed-client-blacklist": " Poistettu asiakkaan estolistalta ",
+  "sua:cmd.added-server-blacklist": " Lisätty palvelimen estolistalle ",
+  "sua:cmd.removed-server-blacklist": " Poistettu palvelimen estolistalta ",
+
+  "sua:cmd.blacklisted-blocks-title": " Estetyt lohkot ",
+  "sua:cmd.none-blacklisted": " Estettyjä lohkoja ei tällä hetkellä ole. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API ei ole alustettu. ",
+  "sua:cmd.server-config-reloaded": " Palvelimen kokoonpano ladattu uudelleen. ",
+  "sua:cmd.pushed": " Lähetetty ",
+  "sua:cmd.enforced": " PAKOTETTU ",
+  "sua:cmd.config": " kokoonpano kaikille klienteille. ",
+  "sua:cmd.clients-may-use-local": " Klientit voivat nyt käyttää paikallista kokoonpanoa. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight-kenttää ei löytynyt. ",
+  "sua:error.stepheight-set-failed": " Korkeuden asetus epäonnistui. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor'-kenttää ei löytynyt; nopeutta ohjataan vain Harmonylla. ",
+
+  "sua:desc.sua.client": " Hallitse asiakkaan estolistaa ",
+  "sua:desc.sua.server": " Hallitse palvelimen estolistaa ",
+  "sua:desc.sua.add": " Lisää valitun lohkon StepUpin estolistalle. ",
+  "sua:desc.sua.remove": " Poistaa valitun lohkon StepUpin estolistalta. ",
+  "sua:desc.sua.list": " Listaa kaikki estetyt lohkot. ",
+  "sua:desc.sua.reload": " Lataa palvelimen kokoonpano uudelleen ja synkronoi kaikki klientit. ",
+
+  "sua:key.increase-height": " Lisää askeleen korkeutta ",
+  "sua:key.decrease-height": " Vähennä askeleen korkeutta ",
+  "sua:key.increase-speed": " Lisää askeleen nopeutta ",
+  "sua:key.decrease-speed": " Vähennä askeleen nopeutta ",
+  "sua:key.toggle": " Vaihda StepUp ",
+  "sua:key.reload": " Lataa kokoonpano uudelleen "
+}

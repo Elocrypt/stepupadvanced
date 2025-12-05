@@ -1,0 +1,79 @@
+{
+  "comment_description": "'StepUp Advanced' için Türkçe yerelleştirme dosyası.",
+  "comment_version": "Mod Sürümü: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Topluluk, makine destekli",
+  "comment_technical_details": "Nötr üslup. Teknik adlar korunmuştur (StepUp, Harmony, Server API). {0} korunur. Boşluklar korunur.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} blok ",
+
+  "sua:server-enforcement-on": " Sunucu zorlaması AÇIK. ",
+  "sua:server-enforcement-off": " Sunucu zorlaması KAPALI. ",
+  "sua:local-settings-enabled": " Yerel ayarlar etkin ",
+  "sua:local-settings-disabled": " Yerel ayarlar pasif ",
+
+  "sua:speed-only-mode": " Yalnızca hız modu ",
+  "sua:height-controls-disabled": " Yükseklik denetimleri devre dışı ",
+
+  "sua:server-enforced": " Sunucu tarafından zorunlu ",
+  "sua:height-change-blocked": " Yükseklik değişimi engellendi ",
+  "sua:speed-change-blocked": " Hız değişimi engellendi ",
+
+  "sua:max-height": " Maksimum yükseklik ",
+  "sua:min-height": " Minimum yükseklik ",
+  "sua:height": " Yükseklik ",
+  "sua:speed": " Hız ",
+  "sua:max-speed": " Maksimum hız ",
+  "sua:min-speed": " Minimum hız ",
+
+  "sua:stepup-enabled": " StepUp etkin ",
+  "sua:stepup-disabled": " StepUp devre dışı ",
+  "sua:reload-blocked": " Yeniden yükleme engellendi ",
+  "sua:config-reloaded": " Yapılandırma yeniden yüklendi. ",
+
+  "sua:cmd.failed": " Komut başarısız. ",
+  "sua:cmd.must-be-player": " Bu komutu kullanmak için oyuncu olmalısınız. ",
+  "sua:cmd.must-be-server-player": " Sunucu oyuncusu olmalısınız. ",
+  "sua:cmd.no-block-targeted": " Hedeflenen blok yok. ",
+
+  "sua:cmd.already-listed": " Zaten listede. ",
+  "sua:cmd.not-listed-client": " İstemci kara listesinde değil ",
+  "sua:cmd.is-on-blacklist": " kara listenizde. ",
+  "sua:cmd.already-listed-server": " Zaten sunucu kara listesinde ",
+  "sua:cmd.not-on-server-blacklist": " Sunucu kara listesinde değil ",
+
+  "sua:cmd.added-client-blacklist": " İstemci kara listesine eklendi ",
+  "sua:cmd.removed-client-blacklist": " İstemci kara listesinden kaldırıldı ",
+  "sua:cmd.added-server-blacklist": " Sunucu kara listesine eklendi ",
+  "sua:cmd.removed-server-blacklist": " Sunucu kara listesinden kaldırıldı ",
+
+  "sua:cmd.blacklisted-blocks-title": " Kara listedeki bloklar ",
+  "sua:cmd.none-blacklisted": " Şu anda kara listede blok yok. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API başlatılmadı. ",
+  "sua:cmd.server-config-reloaded": " Sunucu yapılandırması yeniden yüklendi. ",
+  "sua:cmd.pushed": " Gönderildi ",
+  "sua:cmd.enforced": " ZORUNLU ",
+  "sua:cmd.config": " yapılandırma tüm istemcilere. ",
+  "sua:cmd.clients-may-use-local": " İstemciler artık yerel yapılandırmayı kullanabilir. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight alanı bulunamadı. ",
+  "sua:error.stepheight-set-failed": " Yükseklik ayarlanamadı. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' alanı bulunamadı; hız yalnızca Harmony ile kontrol edilir. ",
+
+  "sua:desc.sua.client": " İstemci kara listesini yönet ",
+  "sua:desc.sua.server": " Sunucu kara listesini yönet ",
+  "sua:desc.sua.add": " Seçili bloğu StepUp kara listesine ekler. ",
+  "sua:desc.sua.remove": " Seçili bloğu StepUp kara listesinden kaldırır. ",
+  "sua:desc.sua.list": " Kara listedeki tüm blokları listeler. ",
+  "sua:desc.sua.reload": " Sunucu yapılandırmasını yeniden yükler ve tüm istemcilerle senkronize eder. ",
+
+  "sua:key.increase-height": " Adım yüksekliğini artır ",
+  "sua:key.decrease-height": " Adım yüksekliğini azalt ",
+  "sua:key.increase-speed": " Adım hızını artır ",
+  "sua:key.decrease-speed": " Adım hızını azalt ",
+  "sua:key.toggle": " StepUp aç/kapat ",
+  "sua:key.reload": " Yapılandırmayı yeniden yükle "
+}

@@ -1,0 +1,79 @@
+{
+  "comment_description": "Dansk lokaliseringsfil for 'StepUp Advanced'.",
+  "comment_version": "Mod-version: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Fællesskab, maskinassisteret",
+  "comment_technical_details": "Neutral stil. Tekniske navne uændrede (StepUp, Harmony, Server API). {0} bevares. Mellemrum bevaret.",
+
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} blokke ",
+
+  "sua:server-enforcement-on": " Serverhåndhævelse AKTIVERET. ",
+  "sua:server-enforcement-off": " Serverhåndhævelse DEAKTIVERET. ",
+  "sua:local-settings-enabled": " Lokale indstillinger aktiveret ",
+  "sua:local-settings-disabled": " Lokale indstillinger deaktiveret ",
+
+  "sua:speed-only-mode": " Kun-hastighed-tilstand ",
+  "sua:height-controls-disabled": " Højdestyring deaktiveret ",
+
+  "sua:server-enforced": " Håndhævet af serveren ",
+  "sua:height-change-blocked": " Højdeforandring blokeret ",
+  "sua:speed-change-blocked": " Hastighedsændring blokeret ",
+
+  "sua:max-height": " Maksimal højde ",
+  "sua:min-height": " Minimal højde ",
+  "sua:height": " Højde ",
+  "sua:speed": " Hastighed ",
+  "sua:max-speed": " Maksimal hastighed ",
+  "sua:min-speed": " Minimal hastighed ",
+
+  "sua:stepup-enabled": " StepUp aktiveret ",
+  "sua:stepup-disabled": " StepUp deaktiveret ",
+  "sua:reload-blocked": " Genindlæsning blokeret ",
+  "sua:config-reloaded": " Konfiguration genindlæst. ",
+
+  "sua:cmd.failed": " Kommando mislykkedes. ",
+  "sua:cmd.must-be-player": " Du skal være spiller for at bruge denne kommando. ",
+  "sua:cmd.must-be-server-player": " Skal være en server-spiller. ",
+  "sua:cmd.no-block-targeted": " Ingen blok valgt. ",
+
+  "sua:cmd.already-listed": " Allerede på listen. ",
+  "sua:cmd.not-listed-client": " Ikke på klientens blacklist ",
+  "sua:cmd.is-on-blacklist": " er på din blacklist. ",
+  "sua:cmd.already-listed-server": " Allerede på serverens blacklist ",
+  "sua:cmd.not-on-server-blacklist": " Ikke på serverens blacklist ",
+
+  "sua:cmd.added-client-blacklist": " Føjet til klientens blacklist ",
+  "sua:cmd.removed-client-blacklist": " Fjernet fra klientens blacklist ",
+  "sua:cmd.added-server-blacklist": " Føjet til serverens blacklist ",
+  "sua:cmd.removed-server-blacklist": " Fjernet fra serverens blacklist ",
+
+  "sua:cmd.blacklisted-blocks-title": " Blokerede blokke ",
+  "sua:cmd.none-blacklisted": " Ingen blokerede blokke i øjeblikket. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API ikke initialiseret. ",
+  "sua:cmd.server-config-reloaded": " Serverkonfiguration genindlæst. ",
+  "sua:cmd.pushed": " Sendt ",
+  "sua:cmd.enforced": " HÅNDHÆVET ",
+  "sua:cmd.config": " konfiguration til alle klienter. ",
+  "sua:cmd.clients-may-use-local": " Klienter kan nu bruge lokal konfiguration. ",
+
+  "sua:error.stepheight-field-missing": " StepHeight-felt ikke fundet. ",
+  "sua:error.stepheight-set-failed": " Kunne ikke indstille højde. ",
+  "sua:warn.elevatefactor-field-missing": " 'elevateFactor' ikke fundet; hastighed styres kun via Harmony. ",
+
+  "sua:desc.sua.client": " Administrer klientens blacklist ",
+  "sua:desc.sua.server": " Administrer serverens blacklist ",
+  "sua:desc.sua.add": " Tilføjer den valgte blok til StepUp-blacklisten. ",
+  "sua:desc.sua.remove": " Fjerner den valgte blok fra StepUp-blacklisten. ",
+  "sua:desc.sua.list": " Viser alle blokerede blokke. ",
+  "sua:desc.sua.reload": " Genindlæser serverkonfiguration og synkroniserer alle klienter. ",
+
+  "sua:key.increase-height": " Øg stephøjde ",
+  "sua:key.decrease-height": " Sænk stephøjde ",
+  "sua:key.increase-speed": " Øg stephastighed ",
+  "sua:key.decrease-speed": " Sænk stephastighed ",
+  "sua:key.toggle": " Skift StepUp ",
+  "sua:key.reload": " Genindlæs konfiguration "
+}

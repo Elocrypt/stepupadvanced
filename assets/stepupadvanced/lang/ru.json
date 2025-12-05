@@ -1,0 +1,79 @@
+{
+  "comment_description": "Русский файл локализации для 'StepUp Advanced'.",
+  "comment_version": "Версия мода: v1.1.0",
+  "comment_author": "Elocrypt",
+  "comment_contributors": "Сообщество, машинная помощь",
+  "comment_technical_details": "Нейтральный стиль. Технические имена сохранены (StepUp, Harmony, Server API). Для {0} использовано общее множественное 'блоков'. Пробелы сохранены.",
+  
+  "sua:modname": "StepUp Advanced",
+
+  "sua:units-blocks": " {0} блоков ",
+
+  "sua:server-enforcement-on": " Принудительное применение ВКЛ. ",
+  "sua:server-enforcement-off": " Принудительное применение ВЫКЛ. ",
+  "sua:local-settings-enabled": " Локальные настройки включены ",
+  "sua:local-settings-disabled": " Локальные настройки отключены ",
+
+  "sua:speed-only-mode": " Режим только скорости ",
+  "sua:height-controls-disabled": " Управление высотой отключено ",
+
+  "sua:server-enforced": " Принудительно сервером ",
+  "sua:height-change-blocked": " Изменение высоты заблокировано ",
+  "sua:speed-change-blocked": " Изменение скорости заблокировано ",
+
+  "sua:max-height": " Максимальная высота ",
+  "sua:min-height": " Минимальная высота ",
+  "sua:height": " Высота ",
+  "sua:speed": " Скорость ",
+  "sua:max-speed": " Максимальная скорость ",
+  "sua:min-speed": " Минимальная скорость ",
+
+  "sua:stepup-enabled": " StepUp включён ",
+  "sua:stepup-disabled": " StepUp отключён ",
+  "sua:reload-blocked": " Перезагрузка заблокирована ",
+  "sua:config-reloaded": " Конфигурация перезагружена. ",
+
+  "sua:cmd.failed": " Команда завершилась с ошибкой. ",
+  "sua:cmd.must-be-player": " Вы должны быть игроком, чтобы использовать эту команду. ",
+  "sua:cmd.must-be-server-player": " Необходимо быть игроком сервера. ",
+  "sua:cmd.no-block-targeted": " Блок не выбран. ",
+
+  "sua:cmd.already-listed": " Уже в списке. ",
+  "sua:cmd.not-listed-client": " Нет в клиентском чёрном списке ",
+  "sua:cmd.is-on-blacklist": " находится в вашем чёрном списке. ",
+  "sua:cmd.already-listed-server": " Уже в серверном чёрном списке ",
+  "sua:cmd.not-on-server-blacklist": " Нет в серверном чёрном списке ",
+
+  "sua:cmd.added-client-blacklist": " Добавлено в клиентский чёрный список ",
+  "sua:cmd.removed-client-blacklist": " Удалено из клиентского чёрного списка ",
+  "sua:cmd.added-server-blacklist": " Добавлено в серверный чёрный список ",
+  "sua:cmd.removed-server-blacklist": " Удалено из серверного чёрного списка ",
+
+  "sua:cmd.blacklisted-blocks-title": " Заблокированные блоки ",
+  "sua:cmd.none-blacklisted": " На данный момент нет заблокированных блоков. ",
+
+  "sua:cmd.server-api-not-initialized": " Server API не инициализирована. ",
+  "sua:cmd.server-config-reloaded": " Настройки сервера перезагружены. ",
+  "sua:cmd.pushed": " Отправлена ",
+  "sua:cmd.enforced": " ПРИНУДИТЕЛЬНАЯ ",
+  "sua:cmd.config": " конфигурация всем клиентам. ",
+  "sua:cmd.clients-may-use-local": " Клиенты теперь могут использовать локальную конфигурацию. ",
+
+  "sua:error.stepheight-field-missing": " Поле StepHeight не найдено. ",
+  "sua:error.stepheight-set-failed": " Не удалось применить высоту шага. ",
+  "sua:warn.elevatefactor-field-missing": " Поле 'elevateFactor' не найдено; скорость управляется только через Harmony. ",
+
+  "sua:desc.sua.client": " Управление клиентским чёрным списком ",
+  "sua:desc.sua.server": " Управление серверным чёрным списком ",
+  "sua:desc.sua.add": " Добавляет выбранный блок в чёрный список StepUp. ",
+  "sua:desc.sua.remove": " Удаляет выбранный блок из чёрного списка StepUp. ",
+  "sua:desc.sua.list": " Перечисляет все блоки в чёрном списке. ",
+  "sua:desc.sua.reload": " Перезагружает конфигурацию сервера и синхронизирует с клиентами. ",
+
+  "sua:key.increase-height": " Увеличить высоту шага ",
+  "sua:key.decrease-height": " Уменьшить высоту шага ",
+  "sua:key.increase-speed": " Увеличить скорость шага ",
+  "sua:key.decrease-speed": " Уменьшить скорость шага ",
+  "sua:key.toggle": " Переключить StepUp ",
+  "sua:key.reload": " Перезагрузить конфигурацию "
+}
