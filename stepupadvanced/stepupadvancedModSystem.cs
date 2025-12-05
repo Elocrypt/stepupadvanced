@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Timers;
 using System.Threading;
-using HarmonyLib;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
