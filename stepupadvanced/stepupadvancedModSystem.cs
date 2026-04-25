@@ -704,9 +704,9 @@ public class StepUpAdvancedModSystem : ModSystem
         SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Ok(SuaChat.L("config-reloaded"))}");
         return true;
     }
-    private bool IsNearBlacklistedBlock(IClientPlayer player)
+    private bool IsNearBlacklistedBlock(IClientPlayer player) // строка 707
     {
-        BlockPos playerPos = player.Entity.Pos.AsBlockPos;
+        BlockPos playerPos = player.Entity.SidedPos.AsBlockPos; // строка 709
         IWorldAccessor world = player.Entity.World;
 
         var serverList = StepUpAdvancedConfig.Current?.BlockBlacklist ?? new List<string>();
