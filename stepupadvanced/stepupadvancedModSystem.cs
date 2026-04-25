@@ -49,16 +49,16 @@ static class SuaChat
 
 static class SuaCmd
 {
-    public static TextCommandResult Ok(string headline, string detail = null)
+    public static TextCommandResult Ok(string headline, string? detail = null)
         => TextCommandResult.Success($"{SuaChat.Tag} {SuaChat.Ok(headline)}{(detail == null ? "" : " " + detail)}");
 
-    public static TextCommandResult Warn(string headline, string detail = null)
+    public static TextCommandResult Warn(string headline, string? detail = null)
         => TextCommandResult.Success($"{SuaChat.Tag} {SuaChat.Warn(headline)}{(detail == null ? "" : " " + detail)}");
 
-    public static TextCommandResult Err(string headline, string detail = null)
+    public static TextCommandResult Err(string headline, string? detail = null)
         => TextCommandResult.Error($"{SuaChat.Tag} {SuaChat.Err(headline)}{(detail == null ? "" : " " + detail)}");
 
-    public static TextCommandResult Info(string headline, string detail = null)
+    public static TextCommandResult Info(string headline, string? detail = null)
         => TextCommandResult.Success($"{SuaChat.Tag} {SuaChat.Muted(headline)}{(detail == null ? "" : " " + detail)}");
 
     public static TextCommandResult List(string title, IEnumerable<string> items)
@@ -92,8 +92,8 @@ public class StepUpAdvancedModSystem : ModSystem
 
     private bool stepUpEnabled = true;
 
-    private FileSystemWatcher configWatcher;
-    private System.Timers.Timer watcherDebounce;
+    private FileSystemWatcher? configWatcher;
+    private System.Timers.Timer? watcherDebounce;
     private string configPath => Path.Combine(sapi?.GetOrCreateDataPath("ModConfig") ?? "", "StepUpAdvancedConfig.json");
 
     private bool suppressWatcher = false;
@@ -102,8 +102,8 @@ public class StepUpAdvancedModSystem : ModSystem
         (sapi != null && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true)
         || (capi != null && !capi.IsSinglePlayer && StepUpAdvancedConfig.Current?.ServerEnforceSettings == true);
 
-    private static ICoreClientAPI capi;
-    private static ICoreServerAPI sapi;
+    private static ICoreClientAPI? capi;
+    private static ICoreServerAPI? sapi;
 
     private static readonly object ConfigQueueLock = new();
     private static volatile bool saveQueued;
@@ -136,8 +136,8 @@ public class StepUpAdvancedModSystem : ModSystem
     private bool toggleStepUpKeyHeld;
     private bool reloadConfigKeyHeld;
 
-    private FieldInfo fiStepHeight;
-    private FieldInfo fiElevateFactor;
+    private FieldInfo? fiStepHeight;
+    private FieldInfo? fiElevateFactor;
     private float lastAppliedStepHeight = float.NaN;
     private double lastAppliedElevate = double.NaN;
     private readonly BlockPos scratchPos = new BlockPos(0);
@@ -947,7 +947,7 @@ public class StepUpAdvancedModSystem : ModSystem
     private float DistanceToCeiling(IClientPlayer player, float requestedStep)
     {
         var world = player.Entity.World;
-        var basePos = player.Entity.SidedPos.AsBlockPos;
+        var basePos = player.Entity.Pos.AsBlockPos;
         var cfg = StepUpAdvancedConfig.Current;
 
         float hereClear = DistanceToCeilingAt(world, basePos, requestedStep, startDy: 1);
@@ -955,7 +955,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (!cfg.ForwardProbeCeiling || cfg.ForwardProbeDistance <= 0)
             return hereClear;
 
-        double yaw = player.Entity.SidedPos.Yaw;
+        double yaw = player.Entity.Pos.Yaw;
         bool supportedAhead = HasLandingSupport(world, basePos, yaw, cfg.ForwardProbeDistance, requestedStep);
         float tinySafe = Math.Max(0.25f, cfg.DefaultHeight);
         if (cfg.RequireForwardSupport && !supportedAhead) return Math.Min(hereClear, tinySafe);

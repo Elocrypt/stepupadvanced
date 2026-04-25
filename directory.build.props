@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Your local install path -->
+    <VintagestoryDir>F:\VintageStory\Client_v1.22.0\Vintagestory</VintagestoryDir>
+  </PropertyGroup>
+</Project>
