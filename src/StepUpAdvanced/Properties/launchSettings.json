@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "Vintage Story": {
+      "commandName": "Executable",
+      "executablePath": "%VINTAGE_STORY%\\Vintagestory.exe",
+      "commandLineArgs": "--dataPath .\\v",
+      "workingDirectory": "%VINTAGE_STORY%"
+    },
+    "Vintage Story (default datapath)": {
+      "commandName": "Executable",
+      "executablePath": "%VINTAGE_STORY%\\Vintagestory.exe",
+      "workingDirectory": "%VINTAGE_STORY%"
+    }
+  }
+}

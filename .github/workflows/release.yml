@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to package (e.g. 1.2.5)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $version = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } else {
+            $version = '${{ github.event.inputs.version }}'
+          }
+          if (-not $version) {
+            throw "Could not determine version from tag or input."
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Resolved version: $version"
+
+      # Same caveat as ci.yml: requires Vintage Story DLLs accessible to the
+      # runner. Wire VINTAGE_STORY to a private artifact or self-hosted runner
+      # before enabling.
+      - name: Package release
+        if: false  # Enable once VINTAGE_STORY is reachable from this runner
+        shell: pwsh
+        env:
+          VINTAGE_STORY: ${{ secrets.VINTAGE_STORY_PATH }}
+        run: |
+          ./build/package.ps1 -Version '${{ steps.version.outputs.version }}'
+
+      - name: Create GitHub Release
+        if: false  # Enable in the same step as the package step above
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/dist/StepUpAdvanced_${{ steps.version.outputs.version }}.zip
+          generate_release_notes: true
+
+      - name: Notice
+        if: always()
+        run: |
+          echo "Release packaging is gated until Vintage Story DLLs are reachable in CI."
+          echo "Run ./build/package.ps1 -Version <X.Y.Z> locally to produce the zip in the meantime."

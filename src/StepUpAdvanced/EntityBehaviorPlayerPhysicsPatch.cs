@@ -4,20 +4,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using StepUpAdvanced.Configuration;
 using Vintagestory.GameContent;
 
-namespace stepupadvanced
+namespace StepUpAdvanced
 {
     [HarmonyPatch(typeof(EntityBehaviorPlayerPhysics), "TryStepSmooth")]
     public static class EntityBehaviorPlayerPhysicsPatch
     {
-        public static float GetSneakElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.025);
-        public static float GetDefaultElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.05);
-        public static float GetSprintElevateF() => (float)(StepUpAdvancedConfig.Current.StepSpeed * 0.10);
+        public static float GetSneakElevateF() => (float)(StepUpOptions.Current.StepSpeed * 0.025);
+        public static float GetDefaultElevateF() => (float)(StepUpOptions.Current.StepSpeed * 0.05);
+        public static float GetSprintElevateF() => (float)(StepUpOptions.Current.StepSpeed * 0.10);
 
-        public static double GetSneakElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.025;
-        public static double GetDefaultElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.05;
-        public static double GetSprintElevateD() => StepUpAdvancedConfig.Current.StepSpeed * 0.10;
+        public static double GetSneakElevateD() => StepUpOptions.Current.StepSpeed * 0.025;
+        public static double GetDefaultElevateD() => StepUpOptions.Current.StepSpeed * 0.05;
+        public static double GetSprintElevateD() => StepUpOptions.Current.StepSpeed * 0.10;
 
         private static bool Approx(float a, float b) => Math.Abs(a - b) < 1e-6f;
         private static bool Approx(double a, double b) => Math.Abs(a - b) < 1e-8;

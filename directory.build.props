@@ -1,6 +1,46 @@
 <Project>
+
+  <!--
+    Resolve the Vintage Story install directory.
+    Order of precedence:
+      1. Per-call / IDE-provided VintagestoryDir property (highest).
+      2. VINTAGE_STORY environment variable.
+      3. Platform-specific fallback (developer machine default).
+  -->
   <PropertyGroup>
-    <!-- Your local install path -->
-    <VintagestoryDir>F:\VintageStory\Client_v1.22.0\Vintagestory</VintagestoryDir>
+    <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VintagestoryDir>
+    <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(OS)' == 'Windows_NT'">F:\VintageStory\Client_v1.22.0\Vintagestory</VintagestoryDir>
+    <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Vintagestory</VintagestoryDir>
   </PropertyGroup>
+
+  <!--
+    Resolve the Vintage Story user data directory (where Mods/, ModConfig/, Saves/ live).
+    Order of precedence:
+      1. Per-call / IDE-provided VintagestoryData property (highest).
+      2. VINTAGE_STORY_DATA environment variable.
+      3. Fallback on Windows: '$(VintagestoryDir)\v', which matches the launchSettings
+         datapath argument "." + backslash + "v" used by the 'Vintage Story' F5 profile.
+         On Linux, fallback to the conventional ~/.config/VintagestoryData.
+  -->
+  <PropertyGroup>
+    <VintagestoryData Condition="'$(VintagestoryData)' == '' AND '$(VINTAGE_STORY_DATA)' != ''">$(VINTAGE_STORY_DATA)</VintagestoryData>
+    <VintagestoryData Condition="'$(VintagestoryData)' == '' AND '$(OS)' == 'Windows_NT'">$(VintagestoryDir)\v</VintagestoryData>
+    <VintagestoryData Condition="'$(VintagestoryData)' == '' AND '$(OS)' != 'Windows_NT'">$(HOME)/.config/VintagestoryData</VintagestoryData>
+  </PropertyGroup>
+
+  <!-- Shared language + nullability settings for every project in this repo. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!-- Emit a friendly warning if the VS install path doesn't exist on this machine. -->
+  <Target Name="_WarnMissingVintagestoryDir" BeforeTargets="ResolveAssemblyReferences"
+          Condition="!Exists('$(VintagestoryDir)') AND '$(IsTestProject)' != 'true'">
+    <Warning Text="VintagestoryDir '$(VintagestoryDir)' does not exist. Set the VINTAGE_STORY environment variable to your Vintage Story install path." />
+  </Target>
+
 </Project>
