@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Phase 3a (Network layer split — channel extraction):**
+  - New `Infrastructure/Network/ConfigSyncChannel.cs` owns the network
+    channel registration on both sides, the player-join push, and the
+    broadcast helper used by the config-file watcher and `/sua reload`.
+    Five `"stepupadvanced"` channel-name string references collapse into
+    one `internal const string ChannelName` on the new class.
+  - `StepUpAdvancedModSystem.OnPlayerJoin` removed; the equivalent
+    handler now lives privately on `ConfigSyncChannel`. The `IsEnforced`
+    gate is gone (see Fixed).
+  - Three inline `sapi.Network.GetChannel(...).SendPacket(...)` blocks
+    (in `OnPlayerJoin`, `OnConfigFileChanged`, and `ReloadServerConfig`)
+    collapse into single `configSyncChannel.BroadcastToAll()` /
+    join-handler calls. The channel reference is now cached at
+    registration time rather than re-fetched per send.
+  - Wire DTO unchanged for this sub-phase (still `StepUpOptions`).
+    Phase 3b introduces a narrow `ConfigSyncPacket` and decouples
+    persistence shape from wire shape.
+  - `StepUpAdvancedModSystem` net 21 lines smaller; no behavior change
+    other than the join-broadcast fix below.
+
 - **Phase 2c (Configuration split — blacklist + watcher extraction):**
   - `BlockBlacklistConfig` class renamed to `BlockBlacklistOptions` and
     moved to `Configuration/BlockBlacklistOptions.cs`. Pure data class,
@@ -102,5 +122,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.editorconfig` with C# conventions matching the HUD Clock house style.
 - `build/package.ps1` for producing release zips.
 - `.github/workflows/ci.yml` and `release.yml` for CI and tagged releases.
+
+### Fixed
+
+- **Phase 3a:** `OnPlayerJoin` now broadcasts the current server options
+  unconditionally on every player join, instead of only when enforcement
+  was active. This fixes the case where a server toggled enforcement off
+  while a client was disconnected: the client would reconnect and never
+  be told the new state, leaving it stuck behind stale server limits
+  until something else triggered a broadcast (a `/sua reload`, a
+  config-file edit, etc.). The single-player path is unaffected — the
+  client-side handler still short-circuits enforcement on
+  `capi.IsSinglePlayer`.
 
 [Unreleased]: https://github.com/Elocrypt/stepupadvanced/compare/v1.2.4...HEAD

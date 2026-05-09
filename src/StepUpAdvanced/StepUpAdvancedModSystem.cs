@@ -13,6 +13,7 @@ using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 using StepUpAdvanced.Configuration;
 using StepUpAdvanced.Core;
+using StepUpAdvanced.Infrastructure.Network;
 
 // Phase 1: SuaChat and SuaCmd moved to StepUpAdvanced.Core. These aliases keep
 // existing call sites in this file compiling unchanged. Phase 8 sweeps call
@@ -46,6 +47,7 @@ public class StepUpAdvancedModSystem : ModSystem
     private bool stepUpEnabled = true;
 
     private DebouncedConfigWatcher? configWatcher;
+    private ConfigSyncChannel? configSyncChannel;
     private string configPath => Path.Combine(sapi?.GetOrCreateDataPath("ModConfig") ?? "", "StepUpAdvancedConfig.json");
 
     private bool IsEnforced
@@ -143,14 +145,9 @@ public class StepUpAdvancedModSystem : ModSystem
         base.StartServerSide(api);
         sapi = api;
         ConfigStore.LoadOrUpgrade(api);
-        var channel = sapi.Network.RegisterChannel("stepupadvanced")
-            .RegisterMessageType<StepUpOptions>();
 
-        if (channel == null)
-        {
-            ModLog.Error(sapi, "Failed to register network channel!");
-        }
-        api.Event.PlayerNowPlaying += OnPlayerJoin;
+        configSyncChannel ??= new ConfigSyncChannel();
+        configSyncChannel.RegisterServer(api);
 
         SetupConfigWatcher();
         RegisterServerCommands();
@@ -160,9 +157,9 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         base.StartClientSide(api);
         capi = api;
-        api.Network.RegisterChannel("stepupadvanced")
-                .RegisterMessageType<StepUpOptions>()
-                .SetMessageHandler<StepUpOptions>(OnReceiveServerConfig);
+
+        configSyncChannel ??= new ConfigSyncChannel();
+        configSyncChannel.RegisterClient(api, OnReceiveServerConfig);
 
         ConfigStore.LoadOrUpgrade(api);
         BlockBlacklistStore.Load(api);
@@ -194,22 +191,6 @@ public class StepUpAdvancedModSystem : ModSystem
         capi.Event.RegisterGameTickListener((dt) => { ApplyStepHeightToPlayer(); }, 50);
         ApplyElevateFactorToPlayer(16f);
         RegisterCommands();
-    }
-
-    private void OnPlayerJoin(IServerPlayer player)
-    {
-        if (StepUpOptions.Current == null || sapi == null)
-        {
-            // Note: matches pre-existing behavior — if sapi is null, the log
-            // is silently dropped (we have no logger to route through). A
-            // future phase may want to fall back to Console.WriteLine here.
-            if (sapi != null) ModLog.Error(sapi, "Cannot process OnPlayerJoin: config or server API is null.");
-            return;
-        }
-        if (IsEnforced)
-        {
-            sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpOptions.Current, player);
-        }
     }
 
     private void OnReceiveServerConfig(StepUpOptions config)
@@ -401,8 +382,7 @@ public class StepUpAdvancedModSystem : ModSystem
         configWatcher?.Suppress(150);
         ConfigStore.LoadOrUpgrade(sapi);
 
-        foreach (IServerPlayer p in sapi.World.AllOnlinePlayers)
-            sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpOptions.Current, p);
+        configSyncChannel?.BroadcastToAll();
 
         if (StepUpOptions.Current.ServerEnforceSettings)
             return SuaCmd.Ok(SuaChat.L("cmd.server-config-reloaded"),
@@ -832,8 +812,7 @@ public class StepUpAdvancedModSystem : ModSystem
         ModLog.Event(sapi, "Detected config file change. Reloading...");
         ConfigStore.LoadOrUpgrade(sapi);
 
-        foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
-            sapi.Network.GetChannel("stepupadvanced").SendPacket(StepUpOptions.Current, player);
+        configSyncChannel?.BroadcastToAll();
 
         if (StepUpOptions.Current.ServerEnforceSettings)
             ModLog.Verbose(sapi, "Server-enforced config pushed to all clients.");
