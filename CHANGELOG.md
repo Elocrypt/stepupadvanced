@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Phase 4 (Input layer extraction):**
+  - New `Infrastructure/Input/HotkeyBinder.cs` collapses each
+    `RegisterHotKey + SetHotKeyHandler` pair into a single
+    `binder.Bind(id, name, key, handler)` call. The 12 lines of parallel
+    registration in the previous `RegisterHotkeys()` become 6.
+  - New `Infrastructure/Input/KeyHoldTracker.cs` encapsulates the
+    "fire once per key press" pattern used by the toggle and reload
+    hotkeys. Self-subscribes to `capi.Event.KeyUp` for its hotkey's
+    current keycode (resolved per-event, so runtime remaps continue to
+    work). The two `*KeyHeld` bool fields and the inline
+    multi-condition KeyUp delegate are gone.
+  - New `Infrastructure/Input/MessageDebouncer.cs` owns toast-suppression
+    state via nine named `OnceFlag` properties — one per distinct toast.
+    Replaces six shared-purpose `hasShown*` bool fields on
+    `StepUpAdvancedModSystem`. Typed handles, no string keys. See Fixed
+    below for the bugs this resolves.
+  - `StepUpAdvancedModSystem` ~30 lines smaller; behavior preserved
+    except for the toast-suppression bug fixes below.
+  - **Tests:** new `tests/StepUpAdvanced.Tests/Infrastructure/Input/MessageDebouncerTests.cs`
+    with 11 cases covering `OnceFlag`'s show-once-until-reset contract
+    and `MessageDebouncer`'s flag independence (one positive case per
+    historical shared-flag bug). `KeyHoldTracker` and `HotkeyBinder` are
+    thin adapters over VS event APIs and aren't unit-tested — wrapping
+    `ICoreClientAPI` for testability would add more code than it
+    verifies.
+
 - **Phase 3a (Network layer split — channel extraction):**
   - New `Infrastructure/Network/ConfigSyncChannel.cs` owns the network
     channel registration on both sides, the player-join push, and the
@@ -124,6 +150,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/ci.yml` and `release.yml` for CI and tagged releases.
 
 ### Fixed
+
+- **Phase 4 (toast suppression — five distinct shared-flag bugs):**
+  Six `hasShown*` bool fields were each driving multiple unrelated
+  toast suppressions, causing toasts to be silently swallowed when an
+  unrelated condition had already fired earlier in the session:
+  - `hasShownMaxMessage` was shared across `OnIncreaseStepHeight`
+    (height-at-max), `OnIncreaseElevateFactor` (speed-at-max), AND
+    `OnReloadConfig` (reload-blocked). Hitting the height cap
+    suppressed the next speed-at-max or reload-blocked toast even
+    though the user had never seen them.
+  - `hasShownMinMessage` was shared between `OnDecreaseStepHeight` and
+    `OnDecreaseElevateFactor` — same cross-axis suppression at the floor.
+  - `hasShownMaxEMessage` and `hasShownMinEMessage` were each shared
+    across both axes for the "server-enforced – {height,speed}-change-blocked"
+    toasts. Direction was incongruously baked into the flag name even
+    though the toast text doesn't distinguish increase from decrease,
+    so a single per-axis flag is the right shape.
+  - `OnDecreaseElevateFactor`'s post-clamp branch gated the at-min
+    toast on `hasShownMinEMessage` — the wrong flag (that one is for
+    the enforced-blocked toast on the same handler). So if the user
+    had bounced off the enforced-blocked toast earlier in the session,
+    reaching the speed floor afterwards would silently swallow the
+    "min-speed" toast. Single-character typo, real user-visible bug.
+  Each toast now has its own `OnceFlag` instance:
+  `HeightAtMax`, `HeightAtMin`, `SpeedAtMax`, `SpeedAtMin`,
+  `HeightEnforced`, `SpeedEnforced`, `HeightSpeedOnlyMode`,
+  `ReloadBlocked`, `ServerEnforcement`.
+
+- **Phase 4 polish (post-smoke-test):** `OnDecreaseStepHeight` and
+  `OnDecreaseElevateFactor` no longer double-emit on the descending key
+  press that lands at the client floor. Previously the post-clamp block
+  fired the "Minimum height" / "Minimum speed" limit toast AND then
+  unconditionally followed it with the generic "Height » 0.6" /
+  "Speed » 0.7" update — redundant since the limit toast already
+  carries the value. The generic update is now suppressed when the
+  press hits the floor; ascending toward the cap is unchanged (one
+  toast per press: generic on the press that lands at cap, limit on
+  the next press that bounces off it). Pre-existing UX bug, not a
+  Phase 4 regression — Phase 4 surfaced it during smoke testing.
 
 - **Phase 3b hotfix-of-the-hotfix:** Single-player no longer silently
   destroys server-side configuration:

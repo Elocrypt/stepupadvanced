@@ -13,6 +13,7 @@ using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 using StepUpAdvanced.Configuration;
 using StepUpAdvanced.Core;
+using StepUpAdvanced.Infrastructure.Input;
 using StepUpAdvanced.Infrastructure.Network;
 
 // Phase 1: SuaChat and SuaCmd moved to StepUpAdvanced.Core. These aliases keep
@@ -89,15 +90,17 @@ public class StepUpAdvancedModSystem : ModSystem
     private bool warnedPlayerNullOnce = false;
     private bool warnedPhysNullOnce = false;
 
-    private bool hasShownMaxMessage;
-    private bool hasShownMinMessage;
-    private bool hasShownMaxEMessage;
-    private bool hasShownMinEMessage;
-    private bool hasShownServerEnforcedNotice;
-    private bool hasShownHeightDisabled;
+    // Toast suppression — see Infrastructure/Input/MessageDebouncer.cs.
+    // Replaces six shared-purpose hasShown* bool fields. Each named
+    // OnceFlag is independent, so e.g. emitting "max-height" no longer
+    // suppresses the next "max-speed" toast.
+    private readonly MessageDebouncer toasts = new();
 
-    private bool toggleStepUpKeyHeld;
-    private bool reloadConfigKeyHeld;
+    // Hold-once trackers for toggle and reload — see KeyHoldTracker.cs.
+    // Initialized in RegisterHotkeys (after capi is available); null
+    // before that point. Holders self-subscribe to capi.Event.KeyUp.
+    private KeyHoldTracker? toggleHeld;
+    private KeyHoldTracker? reloadHeld;
 
     private FieldInfo? fiStepHeight;
     private FieldInfo? fiElevateFactor;
@@ -218,19 +221,21 @@ public class StepUpAdvancedModSystem : ModSystem
             // no per-side override is needed at the receive site.
             ConfigSyncPacketMapper.Apply(StepUpOptions.Current, packet);
 
-            if (!IsEnforced && hasShownServerEnforcedNotice)
+            if (!IsEnforced && toasts.ServerEnforcement.IsShown)
             {
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Ok(SuaChat.L("server-enforcement-off"))} " + $"{SuaChat.Muted(SuaChat.L("local-settings-enabled"))}");
-                hasShownServerEnforcedNotice = false;
+                toasts.ServerEnforcement.Reset();
             }
 
-            if (IsEnforced && !hasShownServerEnforcedNotice)
+            // TryShow returns true on the transition into enforced and marks
+            // the flag — so we always note the transition, but only emit the
+            // chat toast when the server explicitly asked us to (showNotice).
+            if (IsEnforced && toasts.ServerEnforcement.TryShow())
             {
                 if (showNotice)
                 {
                     SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforcement-on"))} " + $"{SuaChat.Muted(SuaChat.L("local-settings-disabled"))}");
                 }
-                hasShownServerEnforcedNotice = true;
             }
 
             ApplyStepHeightToPlayer();
@@ -470,64 +475,46 @@ public class StepUpAdvancedModSystem : ModSystem
     }
     private void RegisterHotkeys()
     {
-        capi.Input.RegisterHotKey("increaseStepHeight", Lang.Get("key.increase-height"), GlKeys.PageUp, HotkeyType.GUIOrOtherControls);
-        capi.Input.RegisterHotKey("decreaseStepHeight", Lang.Get("key.decrease-height"), GlKeys.PageDown, HotkeyType.GUIOrOtherControls);
-        capi.Input.RegisterHotKey("increaseStepSpeed", Lang.Get("key.increase-speed"), GlKeys.Up, HotkeyType.GUIOrOtherControls);
-        capi.Input.RegisterHotKey("decreaseStepSpeed", Lang.Get("key.decrease-speed"), GlKeys.Down, HotkeyType.GUIOrOtherControls);
-        capi.Input.RegisterHotKey("toggleStepUp", Lang.Get("key.toggle"), GlKeys.Insert, HotkeyType.GUIOrOtherControls);
-        capi.Input.RegisterHotKey("reloadConfig", Lang.Get("key.reload"), GlKeys.Home, HotkeyType.GUIOrOtherControls);
-        capi.Input.SetHotKeyHandler("increaseStepHeight", OnIncreaseStepHeight);
-        capi.Input.SetHotKeyHandler("decreaseStepHeight", OnDecreaseStepHeight);
-        capi.Input.SetHotKeyHandler("increaseStepSpeed", OnIncreaseElevateFactor);
-        capi.Input.SetHotKeyHandler("decreaseStepSpeed", OnDecreaseElevateFactor);
-        capi.Input.SetHotKeyHandler("toggleStepUp", OnToggleStepUp);
-        capi.Input.SetHotKeyHandler("reloadConfig", OnReloadConfig);
-        capi.Event.KeyUp += delegate (KeyEvent ke)
-        {
-            if (ke.KeyCode == capi.Input.HotKeys["toggleStepUp"].CurrentMapping.KeyCode)
-            {
-                toggleStepUpKeyHeld = false;
-            }
-            if (ke.KeyCode == capi.Input.HotKeys["reloadConfig"].CurrentMapping.KeyCode)
-            {
-                reloadConfigKeyHeld = false;
-            }
-        };
+        var binder = new HotkeyBinder(capi);
+        binder.Bind("increaseStepHeight", Lang.Get("key.increase-height"), GlKeys.PageUp,   OnIncreaseStepHeight);
+        binder.Bind("decreaseStepHeight", Lang.Get("key.decrease-height"), GlKeys.PageDown, OnDecreaseStepHeight);
+        binder.Bind("increaseStepSpeed",  Lang.Get("key.increase-speed"),  GlKeys.Up,       OnIncreaseElevateFactor);
+        binder.Bind("decreaseStepSpeed",  Lang.Get("key.decrease-speed"),  GlKeys.Down,     OnDecreaseElevateFactor);
+        binder.Bind("toggleStepUp",       Lang.Get("key.toggle"),          GlKeys.Insert,   OnToggleStepUp);
+        binder.Bind("reloadConfig",       Lang.Get("key.reload"),          GlKeys.Home,     OnReloadConfig);
+
+        // KeyHoldTracker subscribes to capi.Event.KeyUp internally for its
+        // hotkey id and clears the held flag on key release. Constructed
+        // after binder.Bind so the hotkey is in the HotKeys dictionary
+        // when the tracker first resolves CurrentMapping.
+        toggleHeld = new KeyHoldTracker(capi, "toggleStepUp");
+        reloadHeld = new KeyHoldTracker(capi, "reloadConfig");
     }
     private bool OnIncreaseStepHeight(KeyCombination comb)
     {
         if (StepUpOptions.Current?.SpeedOnlyMode == true)
         {
-            if (!hasShownHeightDisabled)
-            {
+            if (toasts.HeightSpeedOnlyMode.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} – {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
-                hasShownHeightDisabled = true;
-            }
             return false;
         }
-        hasShownHeightDisabled = false;
+        toasts.HeightSpeedOnlyMode.Reset();
 
         if (IsEnforced && !StepUpOptions.Current.AllowClientChangeStepHeight)
         {
-            if (!hasShownMaxEMessage)
-            {
+            if (toasts.HeightEnforced.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
-                hasShownMaxEMessage = true;
-            }
             return false;
         }
-        hasShownMaxEMessage = false;
+        toasts.HeightEnforced.Reset();
 
         if (IsEnforced && Math.Abs(currentStepHeight - StepUpOptions.Current.ServerMaxStepHeight) < 0.01f)
         {
-            if (!hasShownMaxMessage)
-            {
+            if (toasts.HeightAtMax.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("max-height"))} {SuaChat.Arrow} {SuaChat.Val($"{StepUpOptions.Current.ServerMaxStepHeight:0.0} blocks")}");
-                hasShownMaxMessage = true;
-            }
             return false;
         }
-        hasShownMaxMessage = false;
+        toasts.HeightAtMax.Reset();
 
         float previousStepHeight = currentStepHeight;
         currentStepHeight += Math.Max(StepUpOptions.Current.StepHeightIncrement, 0.1f);
@@ -547,36 +534,27 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         if (StepUpOptions.Current?.SpeedOnlyMode == true)
         {
-            if (!hasShownHeightDisabled)
-            {
+            if (toasts.HeightSpeedOnlyMode.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("speed-only-mode"))} – {SuaChat.Muted(SuaChat.L("height-controls-disabled"))}");
-                hasShownHeightDisabled = true;
-            }
             return false;
         }
-        hasShownHeightDisabled = false;
+        toasts.HeightSpeedOnlyMode.Reset();
 
         if (IsEnforced && !StepUpOptions.Current.AllowClientChangeStepHeight)
         {
-            if (!hasShownMinEMessage)
-            {
+            if (toasts.HeightEnforced.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("height-change-blocked"))}");
-                hasShownMinEMessage = true;
-            }
             return false;
         }
-        hasShownMinEMessage = false;
+        toasts.HeightEnforced.Reset();
 
         if (IsEnforced && Math.Abs(currentStepHeight - StepUpOptions.Current.ServerMinStepHeight) < 0.01f)
         {
-            if (!hasShownMinMessage)
-            {
+            if (toasts.HeightAtMin.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(MinStepHeight, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
-                hasShownMinMessage = true;
-            }
             return false;
         }
-        hasShownMinMessage = false;
+        toasts.HeightAtMin.Reset();
 
         float previousStepHeight = currentStepHeight;
         currentStepHeight -= Math.Max(StepUpOptions.Current.StepHeightIncrement, 0.1f);
@@ -585,15 +563,33 @@ public class StepUpAdvancedModSystem : ModSystem
 
         if (currentStepHeight < previousStepHeight)
         {
-            if (currentStepHeight <= MinStepHeight && !hasShownMinMessage)
+            // True when this descent lands us at (or below) the client
+            // hard floor. Used both to decide whether to emit the
+            // "Minimum height" limit toast and to suppress the generic
+            // "Height » X" update that would otherwise double up on the
+            // same press — see CHANGELOG entry "Phase 4 polish".
+            bool atFloor = currentStepHeight <= MinStepHeight;
+
+            // Post-clamp at-floor toast: same flag as the server-floor branch
+            // above — they emit the same "min-height" text and should share
+            // suppression. (This site previously also used hasShownMinMessage,
+            // which was correct; the one bug here was the cross-axis sharing
+            // with speed-at-min, which the split into HeightAtMin / SpeedAtMin
+            // resolves.)
+            if (atFloor && toasts.HeightAtMin.TryShow())
             {
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(MinStepHeight, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
-                hasShownMinMessage = true;
             }
             StepUpOptions.Current.StepHeight = currentStepHeight;
             QueueConfigSave(capi);
             ApplyStepHeightToPlayer();
-            SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Bold(SuaChat.L("height"))} {SuaChat.Arrow} {SuaChat.Val($"{currentStepHeight:0.0} blocks")}");
+            if (!atFloor)
+            {
+                // The "Minimum height" toast above already carries the value,
+                // so emitting "Height » 0.6" right after it is redundant on
+                // the press that lands at the floor.
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Bold(SuaChat.L("height"))} {SuaChat.Arrow} {SuaChat.Val($"{currentStepHeight:0.0} blocks")}");
+            }
         }
         return true;
     }
@@ -601,25 +597,19 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         if (IsEnforced && !StepUpOptions.Current.AllowClientChangeStepSpeed)
         {
-            if (!hasShownMaxEMessage)
-            {
+            if (toasts.SpeedEnforced.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
-                hasShownMaxEMessage = true;
-            }
             return false;
         }
-        hasShownMaxEMessage = false;
+        toasts.SpeedEnforced.Reset();
 
         if (IsEnforced && Math.Abs(currentElevateFactor - StepUpOptions.Current.ServerMaxStepSpeed) < 0.01f)
         {
-            if (!hasShownMaxMessage)
-            {
+            if (toasts.SpeedAtMax.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("max-speed"))} {SuaChat.Arrow} {SuaChat.Val($"{StepUpOptions.Current.ServerMaxStepSpeed:0.0}")}");
-                hasShownMaxMessage = true;
-            }
             return false;
         }
-        hasShownMaxMessage = false;
+        toasts.SpeedAtMax.Reset();
 
         float previousElevateFactor = currentElevateFactor;
         currentElevateFactor += Math.Max(StepUpOptions.Current.StepSpeedIncrement, 0.01f);
@@ -638,25 +628,19 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         if (IsEnforced && !StepUpOptions.Current.AllowClientChangeStepSpeed)
         {
-            if (!hasShownMinEMessage)
-            {
+            if (toasts.SpeedEnforced.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("speed-change-blocked"))}");
-                hasShownMinEMessage = true;
-            }
             return false;
         }
-        hasShownMinEMessage = false;
+        toasts.SpeedEnforced.Reset();
 
         if (IsEnforced && Math.Abs(currentElevateFactor - StepUpOptions.Current.ServerMinStepSpeed) < 0.01f)
         {
-            if (!hasShownMinMessage)
-            {
+            if (toasts.SpeedAtMin.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-speed"))} {SuaChat.Arrow} {SuaChat.Val($"{StepUpOptions.Current.ServerMinStepSpeed:0.0}")}");
-                hasShownMinMessage = true;
-            }
             return false;
         }
-        hasShownMinMessage = false;
+        toasts.SpeedAtMin.Reset();
 
         float previousElevateFactor = currentElevateFactor;
         currentElevateFactor -= Math.Max(StepUpOptions.Current.StepSpeedIncrement, 0.01f);
@@ -664,25 +648,38 @@ public class StepUpAdvancedModSystem : ModSystem
 
         if (currentElevateFactor < previousElevateFactor)
         {
-            if (currentElevateFactor <= MinElevateFactor && !hasShownMinEMessage)
+            // True when this descent lands us at (or below) the client
+            // hard floor. See OnDecreaseStepHeight for the rationale —
+            // same redundant-double-toast bug, same shape of fix.
+            bool atFloor = currentElevateFactor <= MinElevateFactor;
+
+            // Pre-Phase-4 this branch gated on hasShownMinEMessage — the
+            // enforced-blocked flag, not the at-min flag. So if the user had
+            // just bounced off the enforced-blocked message earlier in the
+            // session, reaching the speed floor here would silently swallow
+            // the "min-speed" toast. Now correctly gated on SpeedAtMin.
+            if (atFloor && toasts.SpeedAtMin.TryShow())
             {
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-speed"))} {SuaChat.Arrow} {SuaChat.Val($"{MinElevateFactor:0.0}")}");
-                hasShownMinEMessage = true;
             }
             StepUpOptions.Current.StepSpeed = currentElevateFactor;
             QueueConfigSave(capi);
             ApplyElevateFactorToPlayer(16f);
-            SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Bold(SuaChat.L("speed"))} {SuaChat.Arrow} {SuaChat.Val($"{currentElevateFactor:0.0}")}");
+            if (!atFloor)
+            {
+                // Skip the generic "Speed » 0.7" update when the
+                // "Minimum speed" toast above already carried the value.
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Bold(SuaChat.L("speed"))} {SuaChat.Arrow} {SuaChat.Val($"{currentElevateFactor:0.0}")}");
+            }
         }
         return true;
     }
     private bool OnToggleStepUp(KeyCombination comb)
     {
-        if (toggleStepUpKeyHeld)
+        if (toggleHeld?.TryFire() != true)
         {
             return false;
         }
-        toggleStepUpKeyHeld = true;
         stepUpEnabled = !stepUpEnabled;
         StepUpOptions.Current.StepUpEnabled = stepUpEnabled;
         QueueConfigSave(capi);
@@ -697,19 +694,21 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         if (IsEnforced && !StepUpOptions.Current.AllowClientConfigReload)
         {
-            if (!hasShownMaxMessage)
-            {
+            if (toasts.ReloadBlocked.TryShow())
                 SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("server-enforced"))} – {SuaChat.Muted(SuaChat.L("reload-blocked"))}");
-                hasShownMaxMessage = true;
-            }
             return false;
         }
-        hasShownMaxMessage = false;
-        if (reloadConfigKeyHeld)
+        // Reset position deliberately mirrors the pre-Phase-4
+        // hasShownMaxMessage = false at the same point: after the
+        // enforcement guard passes, before the hold-guard. So the
+        // ReloadBlocked toast re-arms as soon as enforcement permits
+        // reload again, not only after a successful reload.
+        toasts.ReloadBlocked.Reset();
+
+        if (reloadHeld?.TryFire() != true)
         {
             return false;
         }
-        reloadConfigKeyHeld = true;
         ConfigStore.LoadOrUpgrade(capi);
         currentStepHeight = StepUpOptions.Current?.StepHeight ?? currentStepHeight;
         currentElevateFactor = StepUpOptions.Current?.StepSpeed ?? currentElevateFactor;
