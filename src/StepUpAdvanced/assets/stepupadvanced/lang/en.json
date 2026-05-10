@@ -1,6 +1,6 @@
 {
   "comment_description": "English localization file for 'StepUp Advanced'.",
-  "comment_version": "Mod Version: v1.1.0",
+  "comment_version": "Mod Version: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "",
   "comment_technical_details": "",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Added to the client blacklist ",
   "sua:cmd.removed-client-blacklist": " Removed from the client blacklist ",
+  "sua:cmd.cleared-client-blacklist": " Cleared the client blacklist (entries removed) ",
   "sua:cmd.added-server-blacklist": " Added to the server blacklist ",
   "sua:cmd.removed-server-blacklist": " Removed from the server blacklist ",
+  "sua:cmd.cleared-server-blacklist": " Cleared the server blacklist (entries removed) ",
+  "sua:cmd.blacklist-already-empty-client": " The client blacklist is already empty. ",
+  "sua:cmd.blacklist-already-empty-server": " The server blacklist is already empty. ",
 
   "sua:cmd.blacklisted-blocks-title": " Blacklisted blocks ",
   "sua:cmd.none-blacklisted": " No blocks are currently blacklisted. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Manage the server block blacklist ",
   "sua:desc.sua.add": " Adds the targeted block to the step-up blacklist. ",
   "sua:desc.sua.remove": " Removes the targeted block from the step-up blacklist. ",
+  "sua:desc.sua.remove-all-client": " Clears every entry from the client blacklist. ",
+  "sua:desc.sua.remove-all-server": " Clears every entry from the server blacklist and broadcasts to connected clients. ",
   "sua:desc.sua.list": " Lists all blacklisted blocks. ",
   "sua:desc.sua.reload": " Reloads the server config and syncs to all clients. ",
 

@@ -1,6 +1,6 @@
 {
   "comment_description": "‘StepUp Advanced’ 한국어 현지화 파일.",
-  "comment_version": "모드 버전: v1.1.0",
+  "comment_version": "모드 버전: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "커뮤니티, 기계 번역 지원",
   "comment_technical_details": "중립적 어조. 기술명 미번역(StepUp, Harmony, Server API). {0} 유지. 공백 유지.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " 클라이언트 차단 목록에 추가됨 ",
   "sua:cmd.removed-client-blacklist": " 클라이언트 차단 목록에서 제거됨 ",
+  "sua:cmd.cleared-client-blacklist": " 클라이언트 블랙리스트를 지웠습니다 (항목이 삭제됨) ",
   "sua:cmd.added-server-blacklist": " 서버 차단 목록에 추가됨 ",
   "sua:cmd.removed-server-blacklist": " 서버 차단 목록에서 제거됨 ",
+  "sua:cmd.cleared-server-blacklist": " 서버 블랙리스트를 지웠습니다 (항목이 삭제됨) ",
+  "sua:cmd.blacklist-already-empty-client": " 클라이언트 블랙리스트가 이미 비어 있습니다. ",
+  "sua:cmd.blacklist-already-empty-server": " 서버 블랙리스트가 이미 비어 있습니다. ",
 
   "sua:cmd.blacklisted-blocks-title": " 차단된 블록 ",
   "sua:cmd.none-blacklisted": " 현재 차단된 블록이 없습니다. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " 서버 차단 목록 관리 ",
   "sua:desc.sua.add": " 선택한 블록을 StepUp 차단 목록에 추가합니다. ",
   "sua:desc.sua.remove": " 선택한 블록을 StepUp 차단 목록에서 제거합니다. ",
+  "sua:desc.sua.remove-all-client": " 클라이언트 블랙리스트에서 모든 항목을 지웁니다. ",
+  "sua:desc.sua.remove-all-server": " 서버 블랙리스트에서 모든 항목을 지우고 연결된 클라이언트에게 알립니다. ",
   "sua:desc.sua.list": " 차단된 블록을 모두 표시합니다. ",
   "sua:desc.sua.reload": " 서버 설정을 다시 불러와 모든 클라이언트와 동기화합니다. ",
 

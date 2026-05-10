@@ -1,4 +1,3 @@
-using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Server;
 using StepUpAdvanced.Configuration;
@@ -21,11 +20,13 @@ namespace StepUpAdvanced.Infrastructure.Network;
 /// Harmony patch ID — they share the spelling but play different roles.)
 /// </para>
 /// <para>
-/// In Phase 3a the wire DTO is still <see cref="StepUpOptions"/> — the
-/// same type used for on-disk persistence. Phase 3b introduces a narrow
-/// <c>ConfigSyncPacket</c> with a server-side mapper, decoupling
-/// persistence shape from wire shape so future client-only fields
-/// aren't force-broadcast.
+/// The wire DTO is <see cref="ConfigSyncPacket"/> — a narrow type
+/// independent of <see cref="StepUpOptions"/> (which remains the on-disk
+/// persistence shape). <see cref="ConfigSyncPacketMapper"/> bridges the
+/// two: <c>ToPacket</c> on send, <c>Apply</c> on receive. Persistence and
+/// wire contracts evolve independently, so client-only fields on
+/// <see cref="StepUpOptions"/> (StepHeight, StepSpeed, increments, probe
+/// tunables, QuietMode) are never broadcast.
 /// </para>
 /// </remarks>
 internal sealed class ConfigSyncChannel
@@ -48,7 +49,7 @@ internal sealed class ConfigSyncChannel
     {
         sapi = api;
         serverChannel = api.Network.RegisterChannel(ChannelName)
-            .RegisterMessageType<StepUpOptions>();
+            .RegisterMessageType<ConfigSyncPacket>();
 
         if (serverChannel == null)
         {
@@ -73,11 +74,11 @@ internal sealed class ConfigSyncChannel
     /// requires. A compatible method group (matching signature) still
     /// converts implicitly at the call site.
     /// </remarks>
-    public void RegisterClient(ICoreClientAPI api, NetworkServerMessageHandler<StepUpOptions> onReceive)
+    public void RegisterClient(ICoreClientAPI api, NetworkServerMessageHandler<ConfigSyncPacket> onReceive)
     {
         clientChannel = api.Network.RegisterChannel(ChannelName)
-            .RegisterMessageType<StepUpOptions>()
-            .SetMessageHandler<StepUpOptions>(onReceive);
+            .RegisterMessageType<ConfigSyncPacket>()
+            .SetMessageHandler<ConfigSyncPacket>(onReceive);
     }
 
     /// <summary>
@@ -90,15 +91,17 @@ internal sealed class ConfigSyncChannel
     /// any single send fails, others still proceed. The cached
     /// <see cref="serverChannel"/> avoids the per-call name lookup that
     /// the previous inline <c>GetChannel("stepupadvanced")</c> sites
-    /// performed.
+    /// performed. The packet is built once and reused across all
+    /// recipients.
     /// </remarks>
     public void BroadcastToAll()
     {
         if (sapi == null || serverChannel == null) return;
         if (StepUpOptions.Current == null) return;
 
+        var packet = ConfigSyncPacketMapper.ToPacket(StepUpOptions.Current);
         foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
-            serverChannel.SendPacket(StepUpOptions.Current, player);
+            serverChannel.SendPacket(packet, player);
     }
 
     /// <summary>
@@ -121,6 +124,6 @@ internal sealed class ConfigSyncChannel
             return;
         }
 
-        serverChannel.SendPacket(StepUpOptions.Current, player);
+        serverChannel.SendPacket(ConfigSyncPacketMapper.ToPacket(StepUpOptions.Current), player);
     }
 }

@@ -1,6 +1,6 @@
 {
   "comment_description": "'StepUp Advanced' için Türkçe yerelleştirme dosyası.",
-  "comment_version": "Mod Sürümü: v1.1.0",
+  "comment_version": "Mod Sürümü: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Topluluk, makine destekli",
   "comment_technical_details": "Nötr üslup. Teknik adlar korunmuştur (StepUp, Harmony, Server API). {0} korunur. Boşluklar korunur.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " İstemci kara listesine eklendi ",
   "sua:cmd.removed-client-blacklist": " İstemci kara listesinden kaldırıldı ",
+  "sua:cmd.cleared-client-blacklist": " İstemci kara listesi temizlendi (girdiler kaldırıldı) ",
   "sua:cmd.added-server-blacklist": " Sunucu kara listesine eklendi ",
   "sua:cmd.removed-server-blacklist": " Sunucu kara listesinden kaldırıldı ",
+  "sua:cmd.cleared-server-blacklist": " Sunucu kara listesi temizlendi (girdiler kaldırıldı) ",
+  "sua:cmd.blacklist-already-empty-client": " İstemci kara listesi zaten boş. ",
+  "sua:cmd.blacklist-already-empty-server": " Sunucu kara listesi zaten boş. ",
 
   "sua:cmd.blacklisted-blocks-title": " Kara listedeki bloklar ",
   "sua:cmd.none-blacklisted": " Şu anda kara listede blok yok. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Sunucu kara listesini yönet ",
   "sua:desc.sua.add": " Seçili bloğu StepUp kara listesine ekler. ",
   "sua:desc.sua.remove": " Seçili bloğu StepUp kara listesinden kaldırır. ",
+  "sua:desc.sua.remove-all-client": " İstemci kara listesindeki her girişi temizler. ",
+  "sua:desc.sua.remove-all-server": " Sunucu kara listesindeki her girişi temizler ve bağlı istemcilere yayın yapar. ",
   "sua:desc.sua.list": " Kara listedeki tüm blokları listeler. ",
   "sua:desc.sua.reload": " Sunucu yapılandırmasını yeniden yükler ve tüm istemcilerle senkronize eder. ",
 

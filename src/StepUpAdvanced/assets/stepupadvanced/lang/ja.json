@@ -1,6 +1,6 @@
 {
   "comment_description": "『StepUp Advanced』日本語ローカライズファイル。",
-  "comment_version": "Mod バージョン: v1.1.0",
+  "comment_version": "Mod バージョン: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "コミュニティ、機械翻訳支援",
   "comment_technical_details": "丁寧すぎない中立的な文体。技術名は英語のまま（StepUp, Harmony, Server API）。{0} はそのまま使用。前後の空白は原文を維持。",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " クライアントのブラックリストに追加しました ",
   "sua:cmd.removed-client-blacklist": " クライアントのブラックリストから削除しました ",
+  "sua:cmd.cleared-client-blacklist": " クライアントのブラックリストを消去しました（エントリが削除されました） ",
   "sua:cmd.added-server-blacklist": " サーバーのブラックリストに追加しました ",
   "sua:cmd.removed-server-blacklist": " サーバーのブラックリストから削除しました ",
+  "sua:cmd.cleared-server-blacklist": " サーバーのブラックリストを消去しました（エントリが削除されました） ",
+  "sua:cmd.blacklist-already-empty-client": " クライアントのブラックリストは既に空です。 ",
+  "sua:cmd.blacklist-already-empty-server": " サーバーのブラックリストは既に空です。 ",
 
   "sua:cmd.blacklisted-blocks-title": " ブラックリストのブロック ",
   "sua:cmd.none-blacklisted": " 現在、ブラックリストに登録されたブロックはありません。 ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " サーバーのブラックリストを管理 ",
   "sua:desc.sua.add": " 選択したブロックを StepUp のブラックリストに追加します。 ",
   "sua:desc.sua.remove": " 選択したブロックを StepUp のブラックリストから削除します。 ",
+  "sua:desc.sua.remove-all-client": " クライアントのブラックリストからすべてのエントリを消去します。 ",
+  "sua:desc.sua.remove-all-server": " サーバーのブラックリストからすべてのエントリを消去し、接続されているクライアントに通知します。 ",
   "sua:desc.sua.list": " ブラックリストのブロックを一覧表示します。 ",
   "sua:desc.sua.reload": " サーバー設定を再読み込みし、全クライアントと同期します。 ",
 

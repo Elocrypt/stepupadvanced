@@ -77,17 +77,20 @@ public class EnforcementStateTests
     }
 
     /// <summary>
-    /// Single-player client never enforces, even with the flag set. This
-    /// preserves the original ModSystem.IsEnforced behavior, where
-    /// <c>capi.IsSinglePlayer</c> short-circuited the predicate. Single-player
-    /// has no remote authority to enforce anything against.
+    /// Single-player client + flag-on = enforced. Reversed from the original
+    /// rule: previously SP was always-not-enforced on the grounds that there
+    /// was "no remote authority to enforce against," but a SP player is both
+    /// the client and the server admin — if they explicitly set
+    /// <c>ServerEnforceSettings = true</c> in their own config, they're opting
+    /// in to enforcing caps and the server blacklist on themselves. The flag
+    /// means what it says.
     /// </summary>
     [Fact]
-    public void SinglePlayerClient_WithFlagOn_DoesNotEnforce()
+    public void SinglePlayerClient_WithFlagOn_Enforces()
     {
         var cfg = new StepUpOptions { ServerEnforceSettings = true };
 
         EnforcementState.IsEnforced(EnumAppSide.Client, isSinglePlayer: true, cfg)
-            .Should().BeFalse();
+            .Should().BeTrue();
     }
 }

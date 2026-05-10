@@ -1,6 +1,6 @@
 {
   "comment_description": "Suomenkielinen lokalisointitiedosto modille 'StepUp Advanced'.",
-  "comment_version": "Modin versio: v1.1.0",
+  "comment_version": "Modin versio: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Yhteisö, koneavusteinen",
   "comment_technical_details": "Neutraali tyyli. Tekniset nimet säilytetty (StepUp, Harmony, Server API). {0} säilytetty. Välilyönnit säilytetty.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Lisätty asiakkaan estolistalle ",
   "sua:cmd.removed-client-blacklist": " Poistettu asiakkaan estolistalta ",
+  "sua:cmd.cleared-client-blacklist": " Asiakkaan estolista tyhjennetty (merkinnät poistettu) ",
   "sua:cmd.added-server-blacklist": " Lisätty palvelimen estolistalle ",
   "sua:cmd.removed-server-blacklist": " Poistettu palvelimen estolistalta ",
+  "sua:cmd.cleared-server-blacklist": " Palvelimen estolista tyhjennetty (merkinnät poistettu) ",
+  "sua:cmd.blacklist-already-empty-client": " Asiakkaan estolista on jo tyhjä. ",
+  "sua:cmd.blacklist-already-empty-server": " Palvelimen estolista on jo tyhjä. ",
 
   "sua:cmd.blacklisted-blocks-title": " Estetyt lohkot ",
   "sua:cmd.none-blacklisted": " Estettyjä lohkoja ei tällä hetkellä ole. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Hallitse palvelimen estolistaa ",
   "sua:desc.sua.add": " Lisää valitun lohkon StepUpin estolistalle. ",
   "sua:desc.sua.remove": " Poistaa valitun lohkon StepUpin estolistalta. ",
+  "sua:desc.sua.remove-all-client": " Tyhjentää kaikki merkinnät asiakkaan estolistalta. ",
+  "sua:desc.sua.remove-all-server": " Tyhjentää kaikki merkinnät palvelimen estolistalta ja ilmoittaa siitä yhdistetyille asiakkaille. ",
   "sua:desc.sua.list": " Listaa kaikki estetyt lohkot. ",
   "sua:desc.sua.reload": " Lataa palvelimen kokoonpano uudelleen ja synkronoi kaikki klientit. ",
 

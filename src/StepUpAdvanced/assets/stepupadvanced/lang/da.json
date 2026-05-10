@@ -1,6 +1,6 @@
 {
   "comment_description": "Dansk lokaliseringsfil for 'StepUp Advanced'.",
-  "comment_version": "Mod-version: v1.1.0",
+  "comment_version": "Mod-version: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Fællesskab, maskinassisteret",
   "comment_technical_details": "Neutral stil. Tekniske navne uændrede (StepUp, Harmony, Server API). {0} bevares. Mellemrum bevaret.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Føjet til klientens blacklist ",
   "sua:cmd.removed-client-blacklist": " Fjernet fra klientens blacklist ",
+  "sua:cmd.cleared-client-blacklist": " Klient-sortlisten blev ryddet (poster fjernet) ",
   "sua:cmd.added-server-blacklist": " Føjet til serverens blacklist ",
   "sua:cmd.removed-server-blacklist": " Fjernet fra serverens blacklist ",
+  "sua:cmd.cleared-server-blacklist": " Server-sortlisten blev ryddet (poster fjernet) ",
+  "sua:cmd.blacklist-already-empty-client": " Klient-sortlisten er allerede tom. ",
+  "sua:cmd.blacklist-already-empty-server": " Server-sortlisten er allerede tom. ",
 
   "sua:cmd.blacklisted-blocks-title": " Blokerede blokke ",
   "sua:cmd.none-blacklisted": " Ingen blokerede blokke i øjeblikket. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Administrer serverens blacklist ",
   "sua:desc.sua.add": " Tilføjer den valgte blok til StepUp-blacklisten. ",
   "sua:desc.sua.remove": " Fjerner den valgte blok fra StepUp-blacklisten. ",
+  "sua:desc.sua.remove-all-client": " Rydder alle poster fra klient-sortlisten. ",
+  "sua:desc.sua.remove-all-server": " Rydder alle poster fra server-sortlisten og sender besked til tilsluttede klienter. ",
   "sua:desc.sua.list": " Viser alle blokerede blokke. ",
   "sua:desc.sua.reload": " Genindlæser serverkonfiguration og synkroniserer alle klienter. ",
 

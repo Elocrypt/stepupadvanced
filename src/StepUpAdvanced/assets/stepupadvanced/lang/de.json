@@ -1,6 +1,6 @@
 {
   "comment_description": "Deutsche Übersetzungsdatei für 'StepUp Advanced'.",
-  "comment_version": "Mod Version: v1.1.0",
+  "comment_version": "Mod Version: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, machine-assisted",
   "comment_technical_details": "Neutraler Ton, IT-Begriffe beibehalten (StepUp, Harmony, Server API). Plural bei {0} als 'Blöcke'. Vor-/Nachlauf-Leerzeichen aus dem Original beibehalten.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Zur Client-Blockliste hinzugefügt ",
   "sua:cmd.removed-client-blacklist": " Von der Client-Blockliste entfernt ",
+  "sua:cmd.cleared-client-blacklist": " Client-Blacklist gelöscht (Einträge entfernt) ",
   "sua:cmd.added-server-blacklist": " Zur Server-Blockliste hinzugefügt ",
   "sua:cmd.removed-server-blacklist": " Von der Server-Blockliste entfernt ",
+  "sua:cmd.cleared-server-blacklist": " Server-Blacklist gelöscht (Einträge entfernt) ",
+  "sua:cmd.blacklist-already-empty-client": " Die Client-Blacklist ist bereits leer. ",
+  "sua:cmd.blacklist-already-empty-server": " Die Server-Blacklist ist bereits leer. ",
 
   "sua:cmd.blacklisted-blocks-title": " Blockierte Blöcke ",
   "sua:cmd.none-blacklisted": " Derzeit sind keine Blöcke blockiert. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Server-Blockliste verwalten ",
   "sua:desc.sua.add": " Fügt den anvisierten Block der StepUp-Blockliste hinzu. ",
   "sua:desc.sua.remove": " Entfernt den anvisierten Block aus der StepUp-Blockliste. ",
+  "sua:desc.sua.remove-all-client": " Löscht jeden Eintrag aus der Client-Blacklist. ",
+  "sua:desc.sua.remove-all-server": " Löscht jeden Eintrag aus der Server-Blacklist und überträgt dies an verbundene Clients. ",
   "sua:desc.sua.list": " Listet alle blockierten Blöcke auf. ",
   "sua:desc.sua.reload": " Lädt die Serverkonfiguration neu und synchronisiert alle Clients. ",
 

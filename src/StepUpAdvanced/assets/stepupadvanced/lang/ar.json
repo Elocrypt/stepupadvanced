@@ -1,6 +1,6 @@
 {
   "comment_description": "ملف تعريب اللغة العربية لـ 'StepUp Advanced'.",
-  "comment_version": "إصدار المعدّل: v1.1.0",
+  "comment_version": "إصدار المعدّل: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "المجتمع، بمساعدة آلية",
   "comment_technical_details": "لغة محايدة. الأسماء التقنية تبقى كما هي (StepUp, Harmony, Server API). تم الحفاظ على {0} والمسافات.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " تمت إضافته إلى القائمة السوداء للعميل ",
   "sua:cmd.removed-client-blacklist": " تمت إزالته من القائمة السوداء للعميل ",
+  "sua:cmd.cleared-client-blacklist": " تم مسح القائمة السوداء للعميل (تمت إزالة القيود) ",
   "sua:cmd.added-server-blacklist": " تمت إضافته إلى القائمة السوداء للخادم ",
   "sua:cmd.removed-server-blacklist": " تمت إزالته من القائمة السوداء للخادم ",
+  "sua:cmd.cleared-server-blacklist": " تم مسح القائمة السوداء للخادم (تمت إزالة القيود) ",
+  "sua:cmd.blacklist-already-empty-client": " قائمة العميل السوداء فارغة بالفعل. ",
+  "sua:cmd.blacklist-already-empty-server": " قائمة الخادم السوداء فارغة بالفعل. ",
 
   "sua:cmd.blacklisted-blocks-title": " الكتل المحجوبة ",
   "sua:cmd.none-blacklisted": " لا توجد كتل محجوبة حاليًا. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " إدارة القائمة السوداء للخادم ",
   "sua:desc.sua.add": " يضيف البلوك المحدد إلى قائمة StepUp السوداء. ",
   "sua:desc.sua.remove": " يزيل البلوك المحدد من قائمة StepUp السوداء. ",
+  "sua:desc.sua.remove-all-client": " يمسح كل إدخال من قائمة العميل السوداء. ",
+  "sua:desc.sua.remove-all-server": " يمسح كل إدخال من قائمة الخادم السوداء ويبث إلى العملاء المتصلين. ",
   "sua:desc.sua.list": " يسرد جميع الكتل المحجوبة. ",
   "sua:desc.sua.reload": " يعيد تحميل إعدادات الخادم ويزامن مع جميع العملاء. ",
 

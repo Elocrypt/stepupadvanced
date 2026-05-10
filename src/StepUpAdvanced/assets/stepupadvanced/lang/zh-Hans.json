@@ -1,6 +1,6 @@
 {
   "comment_description": "“StepUp Advanced” 简体中文本地化文件。",
-  "comment_version": "模组版本：v1.1.0",
+  "comment_version": "模组版本：v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "社区，机器协助",
   "comment_technical_details": "保持中性语气。技术名未翻译（StepUp、Harmony、Server API）。{0} 占位符保留。保留前后空格。",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " 已添加到客户端黑名单 ",
   "sua:cmd.removed-client-blacklist": " 已从客户端黑名单移除 ",
+  "sua:cmd.cleared-client-blacklist": " 已清除客户端黑名单（条目已移除） ",
   "sua:cmd.added-server-blacklist": " 已添加到服务器黑名单 ",
   "sua:cmd.removed-server-blacklist": " 已从服务器黑名单移除 ",
+  "sua:cmd.cleared-server-blacklist": " 已清除服务端黑名单（条目已移除） ",
+  "sua:cmd.blacklist-already-empty-client": " 客户端黑名单已为空。 ",
+  "sua:cmd.blacklist-already-empty-server": " 服务端黑名单已为空。 ",
 
   "sua:cmd.blacklisted-blocks-title": " 黑名单方块 ",
   "sua:cmd.none-blacklisted": " 当前没有方块在黑名单中。 ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " 管理服务器黑名单 ",
   "sua:desc.sua.add": " 将所选方块加入 StepUp 黑名单。 ",
   "sua:desc.sua.remove": " 将所选方块从 StepUp 黑名单移除。 ",
+  "sua:desc.sua.remove-all-client": " 清除客户端黑名单中的每一项。 ",
+  "sua:desc.sua.remove-all-server": " 清除服务端黑名单中的每一项，并广播给已连接的客户端。 ",
   "sua:desc.sua.list": " 列出所有在黑名单中的方块。 ",
   "sua:desc.sua.reload": " 重新加载服务器配置并同步到所有客户端。 ",
 

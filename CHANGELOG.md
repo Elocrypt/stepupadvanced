@@ -125,6 +125,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Phase 3b hotfix-of-the-hotfix:** Single-player no longer silently
+  destroys server-side configuration:
+  - `ServerEnforceSettings = true` is now honored verbatim from disk in
+    every context, including single-player. Three load/save/receive sites
+    were forcing the flag to `false` whenever they detected a
+    single-player client (the original justification — "no remote
+    authority to enforce against" — doesn't hold for a player who
+    explicitly opted in to capping themselves). The flag means what it
+    says: the player IS the server admin in SP and can enforce caps
+    and the server blacklist on themselves.
+  - `EnforcementState.IsEnforced` collapsed to a single check on
+    `config.ServerEnforceSettings`. The `side` and `isSinglePlayer`
+    parameters remain in the signature for API stability and future
+    asymmetric rules; their use in the body is gone. Matching change
+    in `ConfigStore.IsEnforcedForThisSide`. The previous
+    "single-player short-circuit" rule is now reversed in
+    `EnforcementStateTests.SinglePlayerClient_WithFlagOn_Enforces`.
+  - `/sua add`, `/sua remove`, `/sua remove all`, and `/sua reload`
+    now persist correctly in single-player. `ConfigStore.Save` was
+    returning early on non-dedicated server side ("integrated server
+    in single-player would otherwise race the client's own save") —
+    but the global mutex + in-process lock already serialize concurrent
+    writers, so that early-return was just dropping `/sua add`'s changes
+    on the floor. Removed.
+  - `Infrastructure/Network/ConfigSyncChannel` is now wired to
+    `ConfigSyncPacket` end-to-end. `RegisterMessageType<StepUpOptions>()`
+    and `SetMessageHandler<StepUpOptions>(...)` swapped to
+    `<ConfigSyncPacket>`; `BroadcastToAll` and `OnPlayerJoin` build the
+    wire packet via `ConfigSyncPacketMapper.ToPacket`. Phase 3b had
+    introduced the packet type and mapper but never finished the channel
+    wiring — `ToPacket` was dead code, and the handler-signature
+    mismatch (`OnReceiveServerConfig(ConfigSyncPacket)` vs.
+    `NetworkServerMessageHandler<StepUpOptions>`) broke the build.
+
 - **Phase 3a:** `OnPlayerJoin` now broadcasts the current server options
   unconditionally on every player join, instead of only when enforcement
   was active. This fixes the case where a server toggled enforcement off

@@ -1,6 +1,6 @@
 {
   "comment_description": "Arquivo de localização em português (Brasil) para 'StepUp Advanced'.",
-  "comment_version": "Versão do mod: v1.1.0",
+  "comment_version": "Versão do mod: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Comunidade, assistido por máquina",
   "comment_technical_details": "Uso de termos comuns de jogos em PT-BR. Nomes técnicos mantidos (StepUp, Harmony, Server API). {0} preservado. Espaços preservados.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Adicionado à lista de bloqueio do cliente ",
   "sua:cmd.removed-client-blacklist": " Removido da lista de bloqueio do cliente ",
+  "sua:cmd.cleared-client-blacklist": " Lista negra do cliente limpa (entradas removidas) ",
   "sua:cmd.added-server-blacklist": " Adicionado à lista de bloqueio do servidor ",
   "sua:cmd.removed-server-blacklist": " Removido da lista de bloqueio do servidor ",
+  "sua:cmd.cleared-server-blacklist": " Lista negra do servidor limpa (entradas removidas) ",
+  "sua:cmd.blacklist-already-empty-client": " A lista negra do cliente já está vazia. ",
+  "sua:cmd.blacklist-already-empty-server": " A lista negra do servidor ya está vazia. ",
 
   "sua:cmd.blacklisted-blocks-title": " Blocos na lista de bloqueio ",
   "sua:cmd.none-blacklisted": " Nenhum bloco está na lista de bloqueio no momento. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Gerenciar a lista de bloqueio do servidor ",
   "sua:desc.sua.add": " Adiciona o bloco selecionado à lista de bloqueio do StepUp. ",
   "sua:desc.sua.remove": " Remove o bloco selecionado da lista de bloqueio do StepUp. ",
+  "sua:desc.sua.remove-all-client": " Limpa todas as entradas da lista negra do cliente. ",
+  "sua:desc.sua.remove-all-server": " Limpa todas as entradas da lista negra do servidor e transmite para os clientes conectados. ",
   "sua:desc.sua.list": " Lista todos os blocos na lista de bloqueio. ",
   "sua:desc.sua.reload": " Recarrega a configuração do servidor e sincroniza com todos os clientes. ",
 

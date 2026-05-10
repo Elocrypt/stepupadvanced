@@ -1,6 +1,6 @@
 {
   "comment_description": "Nederlandse vertaalbestand voor 'StepUp Advanced'.",
-  "comment_version": "Mod Versie: v1.1.0",
+  "comment_version": "Mod Versie: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, machine-assisted",
   "comment_technical_details": "Neutrale toon. Technische namen (StepUp, Harmony, Server API) ongewijzigd. {0} behouden. Spaties uit het origineel behouden.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Toegevoegd aan de client-zwarte lijst ",
   "sua:cmd.removed-client-blacklist": " Verwijderd van de client-zwarte lijst ",
+  "sua:cmd.cleared-client-blacklist": " Client-blacklist gewist (items verwijderd) ",
   "sua:cmd.added-server-blacklist": " Toegevoegd aan de server-zwarte lijst ",
   "sua:cmd.removed-server-blacklist": " Verwijderd van de server-zwarte lijst ",
+  "sua:cmd.cleared-server-blacklist": " Server-blacklist gewist (items verwijderd) ",
+  "sua:cmd.blacklist-already-empty-client": " De client-blacklist is al leeg. ",
+  "sua:cmd.blacklist-already-empty-server": " De server-blacklist is al leeg. ",
 
   "sua:cmd.blacklisted-blocks-title": " Geblokkeerde blokken ",
   "sua:cmd.none-blacklisted": " Momenteel staan er geen blokken op de zwarte lijst. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Beheer de server-zwarte lijst ",
   "sua:desc.sua.add": " Voegt het geselecteerde blok toe aan de StepUp-zwarte lijst. ",
   "sua:desc.sua.remove": " Verwijdert het geselecteerde blok van de StepUp-zwarte lijst. ",
+  "sua:desc.sua.remove-all-client": " Wissen alle items uit de client-blacklist. ",
+  "sua:desc.sua.remove-all-server": " Wissen alle items uit de server-blacklist en zendt dit uit naar verbonden clients. ",
   "sua:desc.sua.list": " Toont alle geblokkeerde blokken. ",
   "sua:desc.sua.reload": " Laadt de serverconfig opnieuw en synchroniseert alle clients. ",
 

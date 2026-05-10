@@ -1,6 +1,6 @@
 {
   "comment_description": "Český soubor lokalizace pro 'StepUp Advanced'.",
-  "comment_version": "Verze modu: v1.1.0",
+  "comment_version": "Verze modu: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Komunita, strojově asistované",
   "comment_technical_details": "Neutrální styl. Zachovány technické názvy (StepUp, Harmony, Server API). {0} zachováno. Ponechány mezery.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Přidáno na klientský blacklist ",
   "sua:cmd.removed-client-blacklist": " Odebráno z klientského blacklistu ",
+  "sua:cmd.cleared-client-blacklist": " Seznam zakázaných klientů byl vymazán (položky byly odstraněny) ",
   "sua:cmd.added-server-blacklist": " Přidáno na serverový blacklist ",
   "sua:cmd.removed-server-blacklist": " Odebráno ze serverového blacklistu ",
+  "sua:cmd.cleared-server-blacklist": " Seznam zakázaných serverů byl vymazán (položky byly odstraněny) ",
+  "sua:cmd.blacklist-already-empty-client": " Seznam zakázaných klientů je již prázdný. ",
+  "sua:cmd.blacklist-already-empty-server": " Seznam zakázaných serverů je již prázdný. ",
 
   "sua:cmd.blacklisted-blocks-title": " Bloky na blacklistu ",
   "sua:cmd.none-blacklisted": " Aktuálně nejsou žádné bloky na blacklistu. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Spravovat serverový blacklist ",
   "sua:desc.sua.add": " Přidá vybraný blok na blacklist StepUp. ",
   "sua:desc.sua.remove": " Odebere vybraný blok z blacklistu StepUp. ",
+  "sua:desc.sua.remove-all-client": " Vymaže každou položku ze seznamu zakázaných klientů. ",
+  "sua:desc.sua.remove-all-server": " Vymaže každou položku ze seznamu zakázaných serverů a informuje připojené klienty. ",
   "sua:desc.sua.list": " Vypíše všechny bloky na blacklistu. ",
   "sua:desc.sua.reload": " Znovu načte konfiguraci serveru a synchronizuje s klienty. ",
 

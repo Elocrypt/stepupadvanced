@@ -9,27 +9,31 @@ namespace StepUpAdvanced.Core;
 /// no static-field coupling. Easy to unit test.
 /// </summary>
 /// <remarks>
-/// The original predicate in <c>StepUpAdvancedModSystem.IsEnforced</c> coupled
-/// three things together: the static <c>capi</c>/<c>sapi</c> fields, the
-/// <c>ServerEnforceSettings</c> flag, and (implicitly) single-player detection.
-/// This helper makes the rule explicit:
-/// <list type="bullet">
-///   <item>The <c>ServerEnforceSettings</c> flag must be set.</item>
-///   <item>AND we're either running on the server, or on a multiplayer client.</item>
-/// </list>
-/// Single-player clients always return <c>false</c> regardless of the flag —
-/// there's no server to enforce against.
+/// <para>
+/// After the Phase 3b hotfix-of-the-hotfix, the predicate is simply: is the
+/// <c>ServerEnforceSettings</c> flag on? The previous "single-player clients
+/// always return false" rule was reversed — a single-player player IS both
+/// the client and the server admin, and may legitimately opt in to enforcing
+/// caps and the server blacklist on themselves. The flag means what it says.
+/// </para>
+/// <para>
+/// The <paramref name="side"/> and <paramref name="isSinglePlayer"/>
+/// parameters are retained even though the body no longer reads them.
+/// Existing call sites in <c>StepUpAdvancedModSystem.IsEnforced</c> and the
+/// unit tests pass them in unmodified, and the signature gives future
+/// asymmetric rules a place to land without churning every call site again.
+/// </para>
 /// </remarks>
 internal static class EnforcementState
 {
     /// <summary>
-    /// True when server enforcement is currently active for the calling side.
+    /// True when server enforcement is currently active.
     /// </summary>
-    /// <param name="side">The side this code is running on.</param>
+    /// <param name="side">
+    ///   Retained for API stability and future asymmetric rules; currently unused.
+    /// </param>
     /// <param name="isSinglePlayer">
-    ///   True if this is a single-player client. Ignored when <paramref name="side"/>
-    ///   is <see cref="EnumAppSide.Server"/>. Callers on the server should pass
-    ///   <c>false</c> (servers are never single-player by definition).
+    ///   Retained for API stability and future asymmetric rules; currently unused.
     /// </param>
     /// <param name="config">
     ///   The active config snapshot. <c>null</c> is treated as not-enforced —
@@ -37,7 +41,6 @@ internal static class EnforcementState
     /// </param>
     public static bool IsEnforced(EnumAppSide side, bool isSinglePlayer, StepUpOptions? config)
     {
-        if (config?.ServerEnforceSettings != true) return false;
-        return side == EnumAppSide.Server || !isSinglePlayer;
+        return config?.ServerEnforceSettings == true;
     }
 }

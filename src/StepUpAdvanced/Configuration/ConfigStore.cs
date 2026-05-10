@@ -139,7 +139,7 @@ internal static class ConfigStore
             StepUpOptions.Current.DefaultSpeed = StepUpOptions.Current.ServerMinStepSpeed; dirty = true;
         }
 
-        bool enforceCaps = IsEnforcedForThisSide(api);
+        bool enforceCaps = IsEnforcedForThisSide();
 
         float stepHeight = StepUpOptions.Current.StepHeight;
         if (stepHeight < ClientMinStepHeight)
@@ -177,11 +177,12 @@ internal static class ConfigStore
         if (stepSpeed != StepUpOptions.Current.StepSpeed) StepUpOptions.Current.StepSpeed = stepSpeed;
         ModLog.Verbose(api, $"Config Loaded: StepSpeed = {StepUpOptions.Current.StepSpeed}");
 
-        if (api is ICoreClientAPI cApi && cApi.IsSinglePlayer && StepUpOptions.Current.ServerEnforceSettings)
-        {
-            ModLog.Verbose(api, "Singleplayer detected. Disabling ServerEnforceSettings.");
-            StepUpOptions.Current.ServerEnforceSettings = false; dirty = true;
-        }
+        // Note: <c>ServerEnforceSettings</c> is honored verbatim from disk in
+        // every context, including single-player. The player IS the server
+        // admin in SP and may legitimately opt in to enforcing caps and the
+        // server blacklist on themselves. Earlier hotfix code clobbered the
+        // flag to <c>false</c> here on every load — that was silent data
+        // loss and is gone.
 
         int fwdOld = StepUpOptions.Current.ForwardProbeDistance;
         StepUpOptions.Current.ForwardProbeDistance = GameMath.Clamp(StepUpOptions.Current.ForwardProbeDistance, 0, 4);
@@ -293,73 +294,122 @@ internal static class ConfigStore
     /// safe via global mutex + in-process lock + retry-with-backoff.
     /// </summary>
     /// <remarks>
-    /// Skipped silently on non-dedicated server side (integrated server in
-    /// single-player would otherwise race the client's own save).
+    /// <para>
+    /// <b>Client-side blacklist isolation:</b> when called with an
+    /// <see cref="ICoreClientAPI"/> AND <c>!IsSinglePlayer</c>, the
+    /// server-managed <c>BlockBlacklist</c> is temporarily swapped out
+    /// for an empty list before writing, then restored in a
+    /// <c>finally</c> block. The client never legitimately owns server
+    /// blacklist data on a remote server — pre-3b the wholesale-replace
+    /// receive path would deposit the remote server's list into
+    /// <c>StepUpOptions.Current</c>, and any subsequent hotkey-triggered
+    /// save would persist it into the player's local server-side config
+    /// file. That polluted file would then haunt single-player sessions
+    /// until manually cleaned. The swap closes that hole at the
+    /// persistence layer; the Phase 3b runtime gate in
+    /// <c>IsNearBlacklistedBlock</c> handles the in-memory side.
+    /// Existing polluted files self-heal on the next remote-MP client
+    /// save.
+    /// </para>
+    /// <para>
+    /// In single-player the swap is bypassed: the player IS the server
+    /// admin and legitimately owns the local <c>StepUpAdvancedConfig.json</c>,
+    /// including its <c>BlockBlacklist</c>. <c>/sua add</c> in single-player
+    /// persists through the server save path; <c>.sua add</c> writes to the
+    /// separate <c>StepUpAdvanced_BlockBlacklist.json</c>. Both work.
+    /// </para>
     /// </remarks>
     public static void Save(ICoreAPI api)
     {
-        if (api is ICoreClientAPI clientApi && clientApi.IsSinglePlayer && StepUpOptions.Current.ServerEnforceSettings)
+        // Guarded blacklist swap — see remarks above.
+        // Gated on !IsSinglePlayer: in single-player the player IS the
+        // server admin and legitimately owns the blacklist, so we let
+        // the full Current (including BlockBlacklist) persist through
+        // the client save path. In remote multiplayer the swap fires
+        // and prevents the server's pushed list from polluting the
+        // client's local server-side config file.
+        bool isClientSide = api is ICoreClientAPI;
+        bool isRemoteMultiplayerClient = isClientSide && !((ICoreClientAPI)api).IsSinglePlayer;
+        List<string>? savedBlacklist = null;
+        if (isRemoteMultiplayerClient)
         {
-            ModLog.Verbose(api, "Singleplayer detected during save. Disabling ServerEnforceSettings.");
-            StepUpOptions.Current.ServerEnforceSettings = false;
+            savedBlacklist = StepUpOptions.Current.BlockBlacklist;
+            StepUpOptions.Current.BlockBlacklist = new List<string>();
         }
 
-        if (api.Side == EnumAppSide.Server)
+        try
         {
-            var sapi = api as ICoreServerAPI;
-            if (sapi != null && !sapi.Server.IsDedicated) return;
-        }
-
-        lock (_saveLock)
-        {
-            using var mutex = new Mutex(false, GlobalMutexName);
-            bool got = false;
-            try { got = mutex.WaitOne(500); } catch { }
-
-            if (!got)
+            lock (_saveLock)
             {
-                ModLog.Warning(api, "Could not acquire config save mutex; skipping save.");
-                return;
-            }
-            const int maxAttempts = 8;
-            for (int attempt = 1; attempt <= maxAttempts; attempt++)
-            {
-                try
+                using var mutex = new Mutex(false, GlobalMutexName);
+                bool got = false;
+                try { got = mutex.WaitOne(500); } catch { }
+
+                if (!got)
                 {
-                    api.StoreModConfig(StepUpOptions.Current, FileName);
-                    ModLog.Verbose(api, "Saved configuration.");
+                    ModLog.Warning(api, "Could not acquire config save mutex; skipping save.");
                     return;
                 }
-                catch (IOException ioex)
+                const int maxAttempts = 8;
+                for (int attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    int delayMs = 15 * (1 << Math.Min(attempt, 6)) + new Random().Next(0, 10);
-                    ModLog.Warning(api, "Save {0}/{1} failed: {2}. Retrying in {3} ms.",
-                        attempt, maxAttempts, ioex.Message, delayMs);
-                    Thread.Sleep(delayMs);
+                    try
+                    {
+                        api.StoreModConfig(StepUpOptions.Current, FileName);
+                        ModLog.Verbose(api, "Saved configuration.");
+                        return;
+                    }
+                    catch (IOException ioex)
+                    {
+                        int delayMs = 15 * (1 << Math.Min(attempt, 6)) + new Random().Next(0, 10);
+                        ModLog.Warning(api, "Save {0}/{1} failed: {2}. Retrying in {3} ms.",
+                            attempt, maxAttempts, ioex.Message, delayMs);
+                        Thread.Sleep(delayMs);
+                    }
                 }
+                ModLog.Error(api, "Could not save configuration after multiple attempts.");
             }
-            ModLog.Error(api, "Could not save configuration after multiple attempts.");
+        }
+        finally
+        {
+            // Restore the in-memory blacklist regardless of save outcome,
+            // so a save failure or exception doesn't leave the client's
+            // runtime view of the server list empty. Only restores when
+            // a swap actually happened (remote-MP client save).
+            if (isRemoteMultiplayerClient && savedBlacklist != null)
+            {
+                StepUpOptions.Current.BlockBlacklist = savedBlacklist;
+            }
         }
     }
 
     /// <summary>
-    /// Replaces the current options with a new instance. Used by the network
-    /// channel handler when receiving server-pushed config.
+    /// Replaces the current options with a new instance.
     /// </summary>
+    /// <remarks>
+    /// As of Phase 3b, this method is no longer called from the network
+    /// receive path — the wholesale-replace was the bug that motivated
+    /// the wire-shape decoupling. The receive handler now uses
+    /// <c>ConfigSyncPacketMapper.Apply</c> to merge enforcement-only
+    /// fields into <see cref="StepUpOptions.Current"/>, preserving
+    /// every client-local field (step height/speed, increments, probe
+    /// tunables, QuietMode, etc.).
+    ///
+    /// Retained as a defensive single-line facade in case a future
+    /// caller needs an in-place options swap. Revisit for removal in
+    /// Phase 8 once the codebase has settled.
+    /// </remarks>
     public static void UpdateConfig(StepUpOptions newConfig) => StepUpOptions.Current = newConfig;
 
     /// <summary>
-    /// Internal predicate: should server caps be enforced for this side
-    /// during load-time clamping? Distinct from the runtime
-    /// <see cref="EnforcementState.IsEnforced"/> because it doesn't have
-    /// access to <c>capi</c>/<c>sapi</c> — it works directly off the API
-    /// argument passed to <see cref="LoadOrUpgrade"/>.
+    /// Internal predicate: should server caps be enforced during load-time
+    /// clamping? After Phase 3b's hotfix-of-the-hotfix, this is just the
+    /// flag — single-player is no longer a forced-off case. The player IS
+    /// the server admin in SP and may opt in to enforcing caps on themselves.
     /// </summary>
-    private static bool IsEnforcedForThisSide(ICoreAPI api)
+    private static bool IsEnforcedForThisSide()
     {
-        if (!StepUpOptions.Current.ServerEnforceSettings) return false;
-        if (api is ICoreClientAPI c && c.IsSinglePlayer) return false;
-        return true;
+        return StepUpOptions.Current.ServerEnforceSettings;
     }
 
     /// <summary>

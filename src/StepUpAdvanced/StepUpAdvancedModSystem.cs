@@ -193,30 +193,30 @@ public class StepUpAdvancedModSystem : ModSystem
         RegisterCommands();
     }
 
-    private void OnReceiveServerConfig(StepUpOptions config)
+    private void OnReceiveServerConfig(ConfigSyncPacket packet)
     {
         if (capi == null) return;
 
-        bool isRemoteMultiplayerClient = !capi.IsSinglePlayer && sapi == null;
-
-        if (!isRemoteMultiplayerClient)
-        {
-            config.ServerEnforceSettings = false;
-        }
+        // Captured on the network thread, used by the main-thread continuation
+        // below. Reading directly from the packet on the network thread is
+        // safe (it's already deserialized into a fresh DTO).
+        bool showNotice = packet.ShowServerEnforcedNotice;
 
         capi.Event.EnqueueMainThreadTask(() =>
         {
-            bool showNotice = config.ShowServerEnforcedNotice;
-
-            ConfigStore.UpdateConfig(config);
-
-            if (!isRemoteMultiplayerClient)
-            {
-                StepUpOptions.Current.ServerEnforceSettings = false;
-            }
-
-            StepUpOptions.Current.AllowClientChangeStepHeight = config.AllowClientChangeStepHeight;
-            StepUpOptions.Current.AllowClientChangeStepSpeed = config.AllowClientChangeStepSpeed;
+            // Merge the ten enforcement-relevant fields into Current,
+            // preserving every client-local field (StepHeight, StepSpeed,
+            // increments, probe tunables, QuietMode, etc.). Pre-3b this
+            // was a wholesale ConfigStore.UpdateConfig(config) replace
+            // that clobbered all of them.
+            //
+            // Note: a previous hotfix forced ServerEnforceSettings = false
+            // here whenever the client wasn't a remote-MP client. That was
+            // silent data loss — single-player and integrated-host players
+            // could not legitimately opt in to enforcement on themselves.
+            // EnforcementState.IsEnforced now honors the flag verbatim;
+            // no per-side override is needed at the receive site.
+            ConfigSyncPacketMapper.Apply(StepUpOptions.Current, packet);
 
             if (!IsEnforced && hasShownServerEnforcedNotice)
             {
@@ -248,6 +248,14 @@ public class StepUpAdvancedModSystem : ModSystem
             .BeginSubCommand("remove")
             .WithDescription(Lang.Get("desc.sua.remove"))
             .HandleWith(RemoveFromBlacklist)
+            // Nested 'all' sub-command — '.sua remove all' clears the
+            // entire client-side list. Independent of the server-side
+            // '/sua remove all'; the client config is owned locally and
+            // is never touched by server admin actions.
+            .BeginSubCommand("all")
+            .WithDescription(Lang.Get("desc.sua.remove-all-client"))
+            .HandleWith(ClearClientBlacklist)
+            .EndSubCommand()
             .EndSubCommand()
             .BeginSubCommand("list")
             .WithDescription(Lang.Get("desc.sua.list"))
@@ -264,6 +272,14 @@ public class StepUpAdvancedModSystem : ModSystem
             .BeginSubCommand("remove")
             .WithDescription(Lang.Get("desc.sua.remove"))
             .HandleWith(RemoveFromServerBlacklist)
+            // Nested 'all' sub-command — '/sua remove all' clears the
+            // entire server-side list. Pointedly does NOT touch any
+            // connected client's local list (those live in a separate
+            // config that the client owns).
+            .BeginSubCommand("all")
+            .WithDescription(Lang.Get("desc.sua.remove-all-server"))
+            .HandleWith(ClearServerBlacklist)
+            .EndSubCommand()
             .EndSubCommand()
             .BeginSubCommand("reload")
             .WithDescription(Lang.Get("desc.sua.reload"))
@@ -318,7 +334,30 @@ public class StepUpAdvancedModSystem : ModSystem
 
         BlockBlacklistOptions.Current.BlockCodes.Remove(blockCode);
         BlockBlacklistStore.Save(capi);
-        return SuaCmd.Err(SuaChat.L("cmd.removed-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
+        return SuaCmd.Ok(SuaChat.L("cmd.removed-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
+    }
+
+    /// <summary>
+    /// Handler for <c>.sua remove all</c>. Wipes the local client-side
+    /// blacklist (<see cref="BlockBlacklistOptions.Current.BlockCodes"/>).
+    /// Independent of the server-side blacklist; <c>/sua remove all</c>
+    /// on the server-side never touches this list.
+    /// </summary>
+    private TextCommandResult ClearClientBlacklist(TextCommandCallingArgs arg)
+    {
+        IClientPlayer clientPlayer = ValidatePlayer(arg, out _);
+        if (clientPlayer == null)
+            return SuaCmd.Err(SuaChat.L("cmd.failed"), SuaChat.Muted(SuaChat.L("cmd.must-be-player")));
+
+        var list = BlockBlacklistOptions.Current?.BlockCodes;
+        int removed = list?.Count ?? 0;
+
+        if (removed == 0)
+            return SuaCmd.Info(SuaChat.L("cmd.blacklist-already-empty-client"));
+
+        list!.Clear();
+        BlockBlacklistStore.Save(capi);
+        return SuaCmd.Ok(SuaChat.L("cmd.cleared-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(removed.ToString())}");
     }
     private TextCommandResult ListBlacklist(TextCommandCallingArgs arg)
     {
@@ -352,6 +391,10 @@ public class StepUpAdvancedModSystem : ModSystem
         StepUpOptions.Current.BlockBlacklist.Add(blockCode);
         configWatcher?.Suppress(150);
         ConfigStore.Save(sapi);
+        // Watcher is suppressed so OnConfigFileChanged won't fire for
+        // this write — broadcast explicitly so connected clients see
+        // the new entry without waiting for /sua reload or reconnect.
+        configSyncChannel?.BroadcastToAll();
         return SuaCmd.Ok(SuaChat.L("cmd.added-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
     }
     private TextCommandResult RemoveFromServerBlacklist(TextCommandCallingArgs arg)
@@ -372,7 +415,42 @@ public class StepUpAdvancedModSystem : ModSystem
         StepUpOptions.Current.BlockBlacklist.Remove(blockCode);
         configWatcher?.Suppress(150);
         ConfigStore.Save(sapi);
-        return SuaCmd.Err(SuaChat.L("cmd.removed-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
+        // Watcher is suppressed so OnConfigFileChanged won't fire —
+        // broadcast explicitly so connected clients see the removal
+        // without waiting for /sua reload or reconnect.
+        configSyncChannel?.BroadcastToAll();
+        return SuaCmd.Ok(SuaChat.L("cmd.removed-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
+    }
+
+    /// <summary>
+    /// Handler for <c>/sua remove all</c>. Wipes the server-side
+    /// blacklist (<see cref="StepUpOptions.Current.BlockBlacklist"/>),
+    /// saves to disk, and broadcasts the change to every connected
+    /// client. Pointedly does NOT touch any client's local blacklist —
+    /// <c>BlockBlacklistOptions</c> is owned by the client and lives
+    /// in a separate config file.
+    /// </summary>
+    private TextCommandResult ClearServerBlacklist(TextCommandCallingArgs arg)
+    {
+        if (sapi == null)
+            return SuaCmd.Err(SuaChat.L("cmd.failed"), SuaChat.Muted(SuaChat.L("cmd.server-api-not-initialized")));
+
+        var list = StepUpOptions.Current?.BlockBlacklist;
+        int removed = list?.Count ?? 0;
+
+        if (removed == 0)
+            return SuaCmd.Info(SuaChat.L("cmd.blacklist-already-empty-server"));
+
+        list!.Clear();
+        configWatcher?.Suppress(150);
+        ConfigStore.Save(sapi);
+        // Suppress(150) prevents the FileSystemWatcher from re-detecting
+        // our own write and triggering OnConfigFileChanged (which would
+        // double-broadcast). The downside is that the watcher's
+        // broadcast path doesn't fire either, so we have to broadcast
+        // explicitly here. Same pattern as ReloadServerConfig.
+        configSyncChannel?.BroadcastToAll();
+        return SuaCmd.Ok(SuaChat.L("cmd.cleared-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(removed.ToString())}");
     }
     private TextCommandResult ReloadServerConfig(TextCommandCallingArgs arg)
     {
@@ -650,30 +728,72 @@ public class StepUpAdvancedModSystem : ModSystem
         BlockPos playerPos = player.Entity.Pos.AsBlockPos;
         IWorldAccessor world = player.Entity.World;
 
-        var serverList = StepUpOptions.Current?.BlockBlacklist ?? new List<string>();
+        // Server list is server-owned: only consult when enforcement is
+        // active. With the Phase 3b hotfix-of-the-hotfix, IsEnforced is
+        // simply the value of ServerEnforceSettings — single-player no
+        // longer short-circuits to false. So in SP, an opted-in player
+        // (flag = true) will see the server list consulted; in SP without
+        // the flag, the server list is ignored even if populated. The
+        // client's own list is independent and always consulted.
+        var serverList = IsEnforced
+            ? (StepUpOptions.Current?.BlockBlacklist ?? new List<string>())
+            : new List<string>();
         var clientList = BlockBlacklistOptions.Current?.BlockCodes ?? new List<string>();
 
-        BlockPos[] positionsToCheck = new BlockPos[]
+        if (serverList.Count == 0 && clientList.Count == 0) return false;
+
+        // Always check the 8-cell ring at distance 1 from the player's
+        // current cell. This catches the "approaching slowly" case.
+        var positionsToCheck = new List<BlockPos>(14)
         {
-        playerPos.EastCopy(),
-        playerPos.WestCopy(),
-        playerPos.NorthCopy(),
-        playerPos.SouthCopy(),
-        playerPos.EastCopy().NorthCopy(),
-        playerPos.EastCopy().SouthCopy(),
-        playerPos.WestCopy().NorthCopy(),
-        playerPos.WestCopy().SouthCopy()
+            playerPos.EastCopy(),
+            playerPos.WestCopy(),
+            playerPos.NorthCopy(),
+            playerPos.SouthCopy(),
+            playerPos.EastCopy().NorthCopy(),
+            playerPos.EastCopy().SouthCopy(),
+            playerPos.WestCopy().NorthCopy(),
+            playerPos.WestCopy().SouthCopy(),
         };
+
+        // Velocity-aware lookahead. The proximity probe runs at 50 ms
+        // (20 Hz). At high StepSpeed (>2), the elevate factor is high
+        // enough that a step-up animation completes faster than a probe
+        // tick — a player can transition from "outside the distance-1
+        // ring" to "stepping onto a blacklisted block" within a single
+        // probe window and the static ring never observes them adjacent.
+        // Projecting the player's motion onto the cardinal axes and
+        // probing 1–2 extra cells in each dominant direction closes
+        // that gap with negligible cost on the slow path.
+        //
+        // Thresholds tuned to be well below sprint speed (~0.15-0.20)
+        // so the lookahead doesn't fire on idle drift, and to add a
+        // second forward cell only when the player is sprinting/falling
+        // toward the blacklisted block.
+        Vec3d motion = player.Entity.Pos.Motion;
+        double absX = Math.Abs(motion.X);
+        double absZ = Math.Abs(motion.Z);
+
+        if (absX > 0.05)
+        {
+            int dx = motion.X > 0 ? 1 : -1;
+            positionsToCheck.Add(playerPos.AddCopy(2 * dx, 0, 0));
+            if (absX > 0.15) positionsToCheck.Add(playerPos.AddCopy(3 * dx, 0, 0));
+        }
+        if (absZ > 0.05)
+        {
+            int dz = motion.Z > 0 ? 1 : -1;
+            positionsToCheck.Add(playerPos.AddCopy(0, 0, 2 * dz));
+            if (absZ > 0.15) positionsToCheck.Add(playerPos.AddCopy(0, 0, 3 * dz));
+        }
+
         foreach (BlockPos pos in positionsToCheck)
         {
             var block = world.BlockAccessor.GetBlock(pos);
             var code = block?.Code.ToString();
             if (code == null) continue;
 
-            bool serverMatch = serverList.Contains(code);
-            bool clientMatch = clientList.Contains(code);
-
-            if (serverMatch || clientMatch)
+            if (serverList.Contains(code) || clientList.Contains(code))
                 return true;
         }
         return false;

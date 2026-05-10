@@ -1,6 +1,6 @@
 {
   "comment_description": "Svensk lokalisering för 'StepUp Advanced'.",
-  "comment_version": "Moddversion: v1.1.0",
+  "comment_version": "Moddversion: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, maskinassisterad",
   "comment_technical_details": "Neutral ton. Tekniska namn kvar (StepUp, Harmony, Server API). {0} bevaras. Mellanslag bevaras.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Tillagd i klientens spärrlista ",
   "sua:cmd.removed-client-blacklist": " Borttagen från klientens spärrlista ",
+  "sua:cmd.cleared-client-blacklist": " Klientens svartlista har rensats (poster borttagna) ",
   "sua:cmd.added-server-blacklist": " Tillagd i serverns spärrlista ",
   "sua:cmd.removed-server-blacklist": " Borttagen från serverns spärrlista ",
+  "sua:cmd.cleared-server-blacklist": " Serverns svartlista har rensats (poster borttagna) ",
+  "sua:cmd.blacklist-already-empty-client": " Klientens svartlista är redan tom. ",
+  "sua:cmd.blacklist-already-empty-server": " Serverns svartlista är redan tom. ",
 
   "sua:cmd.blacklisted-blocks-title": " Spärrade block ",
   "sua:cmd.none-blacklisted": " Inga spärrade block för tillfället. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Hantera serverns spärrlista ",
   "sua:desc.sua.add": " Lägger till valt block i StepUp-spärrlistan. ",
   "sua:desc.sua.remove": " Tar bort valt block från StepUp-spärrlistan. ",
+  "sua:desc.sua.remove-all-client": " Rensar varje post från klientens svartlista. ",
+  "sua:desc.sua.remove-all-server": " Rensar varje post från serverns svartlista och meddelar anslutna klienter. ",
   "sua:desc.sua.list": " Listar alla spärrade block. ",
   "sua:desc.sua.reload": " Laddar om serverkonfiguration och synkar alla klienter. ",
 

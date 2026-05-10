@@ -1,6 +1,6 @@
 {
   "comment_description": "Polski plik lokalizacji dla 'StepUp Advanced'.",
-  "comment_version": "Wersja moda: v1.1.0",
+  "comment_version": "Wersja moda: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Społeczność, tłumaczenie wspomagane",
   "comment_technical_details": "Styl neutralny. Zachowano nazwy techniczne (StepUp, Harmony, Server API). {0} zachowane. Użyto formy 'bloków' jako liczby mnogiej ogólnej.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Dodano do czarnej listy klienta ",
   "sua:cmd.removed-client-blacklist": " Usunięto z czarnej listy klienta ",
+  "sua:cmd.cleared-client-blacklist": " Wyczyszczono czarną listę klienta (wpisy usunięte) ",
   "sua:cmd.added-server-blacklist": " Dodano do czarnej listy serwera ",
   "sua:cmd.removed-server-blacklist": " Usunięto z czarnej listy serwera ",
+  "sua:cmd.cleared-server-blacklist": " Wyczyszczono czarną listę serwera (wpisy usunięte) ",
+  "sua:cmd.blacklist-already-empty-client": " Czarna lista klienta jest już pusta. ",
+  "sua:cmd.blacklist-already-empty-server": " Czarna lista serwera jest już pusta. ",
 
   "sua:cmd.blacklisted-blocks-title": " Zablokowane bloki ",
   "sua:cmd.none-blacklisted": " Obecnie brak zablokowanych bloków. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Zarządzaj czarną listą serwera ",
   "sua:desc.sua.add": " Dodaje wybrany blok do czarnej listy StepUp. ",
   "sua:desc.sua.remove": " Usuwa wybrany blok z czarnej listy StepUp. ",
+  "sua:desc.sua.remove-all-client": " Czyści każdy wpis z czarnej listy klienta. ",
+  "sua:desc.sua.remove-all-server": " Czyści każdy wpis z czarnej listy serwera i wysyła powiadomienie do połączonych klientów. ",
   "sua:desc.sua.list": " Wyświetla wszystkie bloki na czarnej liście. ",
   "sua:desc.sua.reload": " Przeładowuje konfigurację serwera i synchronizuje z klientami. ",
 

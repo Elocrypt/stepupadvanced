@@ -1,6 +1,6 @@
 {
   "comment_description": "Український файл локалізації для 'StepUp Advanced'.",
-  "comment_version": "Версія мода: v1.1.0",
+  "comment_version": "Версія мода: v1.3.1",
   "comment_author": "Elocrypt",
   "comment_contributors": "Спільнота, машинна допомога",
   "comment_technical_details": "Нейтральний тон. Технічні назви збережено (StepUp, Harmony, Server API). {0} збережено. Пробіли збережені.",
@@ -46,8 +46,12 @@
 
   "sua:cmd.added-client-blacklist": " Додано до клієнтського чорного списку ",
   "sua:cmd.removed-client-blacklist": " Видалено з клієнтського чорного списку ",
+  "sua:cmd.cleared-client-blacklist": " Чорний список клієнта очищено (записи видалено) ",
   "sua:cmd.added-server-blacklist": " Додано до серверного чорного списку ",
   "sua:cmd.removed-server-blacklist": " Видалено із серверного чорного списку ",
+  "sua:cmd.cleared-server-blacklist": " Чорний список сервера очищено (записи видалено) ",
+  "sua:cmd.blacklist-already-empty-client": " Чорний список клієнта вже порожній. ",
+  "sua:cmd.blacklist-already-empty-server": " Чорний список сервера вже порожній. ",
 
   "sua:cmd.blacklisted-blocks-title": " Заблоковані блоки ",
   "sua:cmd.none-blacklisted": " Наразі немає заблокованих блоків. ",
@@ -67,6 +71,8 @@
   "sua:desc.sua.server": " Керувати серверним чорним списком ",
   "sua:desc.sua.add": " Додає вибраний блок до чорного списку StepUp. ",
   "sua:desc.sua.remove": " Видаляє вибраний блок із чорного списку StepUp. ",
+  "sua:desc.sua.remove-all-client": " Очищає кожен запис із чорного списку клієнта. ",
+  "sua:desc.sua.remove-all-server": " Очищає кожен запис із чорного списку сервера та сповіщає підключених клієнтів. ",
   "sua:desc.sua.list": " Показує всі блоки у чорному списку. ",
   "sua:desc.sua.reload": " Перезавантажує конфігурацію сервера та синхронізує з клієнтами. ",
 
