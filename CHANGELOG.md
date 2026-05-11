@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Phase 5 (Domain extraction — framework-free math):**
+  - New `Domain/Physics/StepHeightClamp.cs` and
+    `Domain/Physics/ElevateFactorMath.cs`: pure-function clamps with
+    `ClientMin` / `Default` constants and a single `Clamp(requested,
+    isEnforced, serverMin, serverMax)` method. Asymmetric by design:
+    client floor always applies, server range applies only when
+    enforced. Defensive when `serverMin < ClientMin` (client floor
+    wins). `ClampHeightClient` / `ClampSpeedClient` on
+    `StepUpAdvancedModSystem` are now one-line wrappers.
+  - New `Domain/Probes/CeilingProbeMath.cs`: framework-free 2D math —
+    `ForwardOffset`, `PerpendicularOffset`, `MaxRiseClamp`,
+    `LandingClearanceRange`, `ForwardSpanOffsets`. Returns value-tuple
+    offsets (`(int dx, int dz)`) so the Domain layer is free of any
+    VS API dependency. `HasLandingSupport`, `DistanceToCeiling`, and
+    `BuildForwardColumns` now route their math through the Domain
+    class; world queries stay inline (Phase 6 extracts those into
+    `Infrastructure/Probes/WorldProbe`).
+  - New `Domain/Blocks/BlacklistMatcher.cs`: strict-equality lookup,
+    polymorphic over `IReadOnlyCollection<string>` so Phase 6's
+    HashSet caching layer can drop in without API churn.
+    `IsNearBlacklistedBlock`'s inner two-list check is now one call
+    to `BlacklistMatcher.MatchesAny`.
+  - **8 constants deleted from `StepUpAdvancedModSystem`:**
+    `MinStepHeight`, `MinElevateFactor`, `DefaultStepHeight`, and
+    `DefaultElevateFactor` moved to the Domain classes (as
+    `ClientMin` / `Default`). `AbsoluteMaxStepHeight`,
+    `AbsoluteMaxElevateFactor`, `MinStepHeightIncrement`, and
+    `MinElevateFactorIncrement` deleted outright — they were declared
+    but never referenced ("unused but might matter someday" is exactly
+    the path to dead-code accumulation).
+  - **2 duplicate constants deleted from `ConfigStore`:**
+    `ClientMinStepHeight` and `ClientMinStepSpeed` were value-for-value
+    duplicates of `MinStepHeight` and `MinElevateFactor`. Both now
+    routed through `StepHeightClamp.ClientMin` /
+    `ElevateFactorMath.ClientMin`. `ServerCapMin/Max{Height,Speed}`
+    stay in `ConfigStore` — they're a server-validation concern, not a
+    client clamp, and a future phase can move them to a
+    server-validation Domain class.
+  - The dead `ForwardBlock(BlockPos, double, int)` overload (declared
+    but never called) deleted; the other overload merged into the
+    `CeilingProbeMath.ForwardOffset` migration.
+  - **Tests:** four new files under
+    `tests/StepUpAdvanced.Tests/Domain/`. 7 cases for
+    `StepHeightClampTests` / `ElevateFactorMathTests`, 14 cases for
+    `CeilingProbeMathTests`, 10 cases for `BlacklistMatcherTests`.
+    Total Phase 5: **38 new cases**.
+
 - **Phase 4 (Input layer extraction):**
   - New `Infrastructure/Input/HotkeyBinder.cs` collapses each
     `RegisterHotKey + SetHotKeyHandler` pair into a single

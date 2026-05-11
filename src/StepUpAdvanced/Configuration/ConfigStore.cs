@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using StepUpAdvanced.Configuration.Migrations;
 using StepUpAdvanced.Core;
+using StepUpAdvanced.Domain.Physics;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -52,14 +53,12 @@ internal static class ConfigStore
     /// </summary>
     private static readonly object _saveLock = new();
 
-    /// <summary>
-    /// Floor value for the local client's <c>StepHeight</c> setting.
-    /// Independent of server caps — applies even with enforcement off.
-    /// </summary>
-    private const float ClientMinStepHeight = 0.6f;
-
-    /// <summary>Floor value for the local client's <c>StepSpeed</c> setting.</summary>
-    private const float ClientMinStepSpeed = 0.7f;
+    // Client-side floor values live on the Domain classes:
+    //   StepHeightClamp.ClientMin (was StepHeightClamp.ClientMin here)
+    //   ElevateFactorMath.ClientMin (was ElevateFactorMath.ClientMin here)
+    // Server-cap bounds stay here as ConfigStore-private because they're
+    // a server-validation concern (not a client clamp); a future phase
+    // may move them to a server-validation Domain class.
 
     /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
     private const float ServerCapMinHeight = 0.6f;
@@ -142,10 +141,10 @@ internal static class ConfigStore
         bool enforceCaps = IsEnforcedForThisSide();
 
         float stepHeight = StepUpOptions.Current.StepHeight;
-        if (stepHeight < ClientMinStepHeight)
+        if (stepHeight < StepHeightClamp.ClientMin)
         {
-            ModLog.Warning(api, $"StepHeight below minimum ({ClientMinStepHeight}). Adjusting to {ClientMinStepHeight}.");
-            stepHeight = ClientMinStepHeight; dirty = true;
+            ModLog.Warning(api, $"StepHeight below minimum ({StepHeightClamp.ClientMin}). Adjusting to {StepHeightClamp.ClientMin}.");
+            stepHeight = StepHeightClamp.ClientMin; dirty = true;
         }
         if (enforceCaps)
         {
@@ -160,10 +159,10 @@ internal static class ConfigStore
         ModLog.Verbose(api, $"Config Loaded: StepHeight = {StepUpOptions.Current.StepHeight}");
 
         float stepSpeed = StepUpOptions.Current.StepSpeed;
-        if (stepSpeed < ClientMinStepSpeed)
+        if (stepSpeed < ElevateFactorMath.ClientMin)
         {
-            ModLog.Warning(api, $"StepSpeed below minimum ({ClientMinStepSpeed}). Adjusting to {ClientMinStepSpeed}.");
-            stepSpeed = ClientMinStepSpeed; dirty = true;
+            ModLog.Warning(api, $"StepSpeed below minimum ({ElevateFactorMath.ClientMin}). Adjusting to {ElevateFactorMath.ClientMin}.");
+            stepSpeed = ElevateFactorMath.ClientMin; dirty = true;
         }
         if (enforceCaps)
         {

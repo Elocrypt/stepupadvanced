@@ -13,6 +13,9 @@ using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 using StepUpAdvanced.Configuration;
 using StepUpAdvanced.Core;
+using StepUpAdvanced.Domain.Blocks;
+using StepUpAdvanced.Domain.Physics;
+using StepUpAdvanced.Domain.Probes;
 using StepUpAdvanced.Infrastructure.Input;
 using StepUpAdvanced.Infrastructure.Network;
 
@@ -72,15 +75,13 @@ public class StepUpAdvancedModSystem : ModSystem
     private static readonly object ConfigQueueLock = new();
     private static volatile bool saveQueued;
 
-    public const float MinStepHeight = 0.6f;
-    public const float MinStepHeightIncrement = 0.1f;
-    public const float AbsoluteMaxStepHeight = 2f;
-    public const float DefaultStepHeight = 0.6f;
-
-    public const float MinElevateFactor = 0.7f;
-    public const float MinElevateFactorIncrement = 0.1f;
-    public const float AbsoluteMaxElevateFactor = 2f;
-    public const float DefaultElevateFactor = 0.7f;
+    // Step-height and step-speed constants live on the Domain classes:
+    //   StepHeightClamp.ClientMin / .Default
+    //   ElevateFactorMath.ClientMin / .Default
+    // Pre-Phase-5 they were public consts on this class. The four "absolute
+    // max" / "min increment" constants were declared but unused — deleted
+    // outright; if a concrete use case ever shows up, the right place to
+    // add them is on the Domain class, not here.
 
     private float currentElevateFactor;
     private float currentStepHeight;
@@ -109,17 +110,18 @@ public class StepUpAdvancedModSystem : ModSystem
     private readonly BlockPos scratchPos = new BlockPos(0);
 
     private float ClampHeightClient(float height)
-    {
-        height = Math.Max(MinStepHeight, height);
-        if (IsEnforced) height = GameMath.Clamp(height, StepUpOptions.Current.ServerMinStepHeight, StepUpOptions.Current.ServerMaxStepHeight);
-        return height;
-    }
+        => StepHeightClamp.Clamp(
+            height,
+            IsEnforced,
+            StepUpOptions.Current.ServerMinStepHeight,
+            StepUpOptions.Current.ServerMaxStepHeight);
+
     private float ClampSpeedClient(float speed)
-    {
-        speed = Math.Max(MinElevateFactor, speed);
-        if (IsEnforced) speed = GameMath.Clamp(speed, StepUpOptions.Current.ServerMinStepSpeed, StepUpOptions.Current.ServerMaxStepSpeed);
-        return speed;
-    }
+        => ElevateFactorMath.Clamp(
+            speed,
+            IsEnforced,
+            StepUpOptions.Current.ServerMinStepSpeed,
+            StepUpOptions.Current.ServerMaxStepSpeed);
 
     public override void Start(ICoreAPI api)
     {
@@ -167,8 +169,8 @@ public class StepUpAdvancedModSystem : ModSystem
         ConfigStore.LoadOrUpgrade(api);
         BlockBlacklistStore.Load(api);
 
-        currentStepHeight = StepUpOptions.Current?.StepHeight ?? DefaultStepHeight;
-        currentElevateFactor = StepUpOptions.Current?.StepSpeed ?? DefaultElevateFactor;
+        currentStepHeight = StepUpOptions.Current?.StepHeight ?? StepHeightClamp.Default;
+        currentElevateFactor = StepUpOptions.Current?.StepSpeed ?? ElevateFactorMath.Default;
 
         bool changed = false;
         float newHeight = ClampHeightClient(currentStepHeight);
@@ -551,7 +553,7 @@ public class StepUpAdvancedModSystem : ModSystem
         if (IsEnforced && Math.Abs(currentStepHeight - StepUpOptions.Current.ServerMinStepHeight) < 0.01f)
         {
             if (toasts.HeightAtMin.TryShow())
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(MinStepHeight, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(StepHeightClamp.ClientMin, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
             return false;
         }
         toasts.HeightAtMin.Reset();
@@ -568,7 +570,7 @@ public class StepUpAdvancedModSystem : ModSystem
             // "Minimum height" limit toast and to suppress the generic
             // "Height » X" update that would otherwise double up on the
             // same press — see CHANGELOG entry "Phase 4 polish".
-            bool atFloor = currentStepHeight <= MinStepHeight;
+            bool atFloor = currentStepHeight <= StepHeightClamp.ClientMin;
 
             // Post-clamp at-floor toast: same flag as the server-floor branch
             // above — they emit the same "min-height" text and should share
@@ -578,7 +580,7 @@ public class StepUpAdvancedModSystem : ModSystem
             // resolves.)
             if (atFloor && toasts.HeightAtMin.TryShow())
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(MinStepHeight, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-height"))} {SuaChat.Arrow} {SuaChat.Val($"{Math.Max(StepHeightClamp.ClientMin, StepUpOptions.Current.ServerMinStepHeight):0.0} blocks")}");
             }
             StepUpOptions.Current.StepHeight = currentStepHeight;
             QueueConfigSave(capi);
@@ -651,7 +653,7 @@ public class StepUpAdvancedModSystem : ModSystem
             // True when this descent lands us at (or below) the client
             // hard floor. See OnDecreaseStepHeight for the rationale —
             // same redundant-double-toast bug, same shape of fix.
-            bool atFloor = currentElevateFactor <= MinElevateFactor;
+            bool atFloor = currentElevateFactor <= ElevateFactorMath.ClientMin;
 
             // Pre-Phase-4 this branch gated on hasShownMinEMessage — the
             // enforced-blocked flag, not the at-min flag. So if the user had
@@ -660,7 +662,7 @@ public class StepUpAdvancedModSystem : ModSystem
             // the "min-speed" toast. Now correctly gated on SpeedAtMin.
             if (atFloor && toasts.SpeedAtMin.TryShow())
             {
-                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-speed"))} {SuaChat.Arrow} {SuaChat.Val($"{MinElevateFactor:0.0}")}");
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Warn(SuaChat.L("min-speed"))} {SuaChat.Arrow} {SuaChat.Val($"{ElevateFactorMath.ClientMin:0.0}")}");
             }
             StepUpOptions.Current.StepSpeed = currentElevateFactor;
             QueueConfigSave(capi);
@@ -792,7 +794,7 @@ public class StepUpAdvancedModSystem : ModSystem
             var code = block?.Code.ToString();
             if (code == null) continue;
 
-            if (serverList.Contains(code) || clientList.Contains(code))
+            if (BlacklistMatcher.MatchesAny(code, serverList, clientList))
                 return true;
         }
         return false;
@@ -945,26 +947,26 @@ public class StepUpAdvancedModSystem : ModSystem
         return block?.CollisionBoxes != null && block.CollisionBoxes.Length > 0;
     }
 
-    private static BlockPos ForwardBlock(BlockPos basePos, double yawRad, int dist)
-    {
-        int sx = (int)Math.Round(Math.Sin(yawRad)) * dist;
-        int sz = (int)Math.Round(Math.Cos(yawRad)) * dist;
-        return basePos.AddCopy(sx, 0, sz);
-    }
-
     private bool HasLandingSupport(IWorldAccessor world, BlockPos basePos, double yawRad, int dist, float requestedStep)
     {
+        // Below ~1 block of rise, the foot is still inside the player's
+        // current cell during the step animation — no need to verify a
+        // landing surface.
         if (requestedStep < 0.95f) return true;
 
-        var fwdXZ = ForwardBlock(basePos, yawRad, dist, scratchPos);
+        var (sx, sz) = CeilingProbeMath.ForwardOffset(yawRad, dist);
+        int fwdX = basePos.X + sx;
+        int fwdZ = basePos.Z + sz;
 
-        int maxRise = Math.Min((int)Math.Floor(requestedStep), 2);
+        int maxRise = CeilingProbeMath.MaxRiseClamp(requestedStep, hardCap: 2);
         if (maxRise <= 0) return true;
 
         int yTopSupport = basePos.Y + maxRise - 1;
         for (int y = yTopSupport; y >= basePos.Y; y--)
         {
-            var pos = new BlockPos(fwdXZ.X, y, fwdXZ.Z);
+            // Per-iteration BlockPos allocation matches pre-Phase-5
+            // behavior. Phase 6 swaps this to a scratch buffer.
+            var pos = new BlockPos(fwdX, y, fwdZ);
             var b = world.BlockAccessor.GetBlock(pos);
             if (b?.CollisionBoxes != null && b.CollisionBoxes.Length > 0)
                 return true;
@@ -987,14 +989,6 @@ public class StepUpAdvancedModSystem : ModSystem
         return maxCheck;
     }
 
-    private static BlockPos ForwardBlock(BlockPos basePos, double yawRad, int dist, BlockPos into)
-    {
-        int sx = (int)Math.Round(Math.Sin(yawRad)) * dist;
-        int sz = (int)Math.Round(Math.Cos(yawRad)) * dist;
-        into.Set(basePos.X + sx, basePos.Y, basePos.Z + sz);
-        return into;
-    }
-
     private float DistanceToCeiling(IClientPlayer player, float requestedStep)
     {
         var world = player.Entity.World;
@@ -1010,16 +1004,17 @@ public class StepUpAdvancedModSystem : ModSystem
         bool supportedAhead = HasLandingSupport(world, basePos, yaw, cfg.ForwardProbeDistance, requestedStep);
         float tinySafe = Math.Max(0.25f, cfg.DefaultHeight);
         if (cfg.RequireForwardSupport && !supportedAhead) return Math.Min(hereClear, tinySafe);
+
         float entHeight = player.Entity.CollisionBox.Y2 - player.Entity.CollisionBox.Y1;
-        int yFeetLanding = basePos.Y + (int)Math.Floor(requestedStep);
-        int yFrom = yFeetLanding + 1;
-        int yTop = yFeetLanding + (int)Math.Floor(entHeight - cfg.CeilingHeadroomPad);
-        if (yTop < yFrom) return hereClear;
+        var (yFrom, yTopInclusive) = CeilingProbeMath.LandingClearanceRange(
+            basePos.Y, requestedStep, entHeight, cfg.CeilingHeadroomPad);
+        if (yTopInclusive < yFrom) return hereClear;
+
         var columns = BuildForwardColumns(basePos, yaw, cfg.ForwardProbeDistance, cfg.ForwardProbeSpan);
         bool blockedAll = true;
         foreach (var col in columns)
         {
-            if (!ColumnHasSolid(world, col, yFrom, yTop + 1))
+            if (!ColumnHasSolid(world, col, yFrom, yTopInclusive + 1))
             {
                 blockedAll = false;
                 break;
@@ -1041,26 +1036,22 @@ public class StepUpAdvancedModSystem : ModSystem
         return false;
     }
 
+    /// <summary>
+    /// Composes absolute world positions from the offset list produced by
+    /// <see cref="CeilingProbeMath.ForwardSpanOffsets"/>. The math (forward
+    /// direction, perpendicular axis, span fan-out) lives in the Domain
+    /// layer; this method is the BlockPos-composition adapter.
+    /// </summary>
     private static BlockPos[] BuildForwardColumns(BlockPos basePos, double yawRad, int dist, int span)
     {
-        int fx = (int)Math.Round(Math.Sin(yawRad));
-        int fz = (int)Math.Round(Math.Cos(yawRad));
-        int px = -fz, pz = fx;
-
-        var center = ForwardBlock(basePos, yawRad, dist, new BlockPos(0));
-
-        if (span <= 0) return new[] { center };
-
-        var cols = new List<BlockPos> { center, new BlockPos(center.X + px, center.Y, center.Z + pz),
-                                             new BlockPos(center.X - px, center.Y, center.Z - pz) };
-
-        if (span >= 2)
+        var offsets = CeilingProbeMath.ForwardSpanOffsets(yawRad, dist, span);
+        var cols = new BlockPos[offsets.Count];
+        int i = 0;
+        foreach (var (dx, dz) in offsets)
         {
-            cols.Add(new BlockPos(center.X + 2 * px, center.Y, center.Z + 2 * pz));
-            cols.Add(new BlockPos(center.X - 2 * px, center.Y, center.Z - 2 * pz));
+            cols[i++] = new BlockPos(basePos.X + dx, basePos.Y, basePos.Z + dz);
         }
-
-        return cols.ToArray();
+        return cols;
     }
 
     private void QueueConfigSave(ICoreAPI api)
