@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -13,11 +12,12 @@ using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 using StepUpAdvanced.Configuration;
 using StepUpAdvanced.Core;
-using StepUpAdvanced.Domain.Blocks;
 using StepUpAdvanced.Domain.Physics;
 using StepUpAdvanced.Domain.Probes;
 using StepUpAdvanced.Infrastructure.Input;
 using StepUpAdvanced.Infrastructure.Network;
+using StepUpAdvanced.Infrastructure.Probes;
+using StepUpAdvanced.Infrastructure.Reflection;
 
 // Phase 1: SuaChat and SuaCmd moved to StepUpAdvanced.Core. These aliases keep
 // existing call sites in this file compiling unchanged. Phase 8 sweeps call
@@ -103,11 +103,21 @@ public class StepUpAdvancedModSystem : ModSystem
     private KeyHoldTracker? toggleHeld;
     private KeyHoldTracker? reloadHeld;
 
-    private FieldInfo? fiStepHeight;
-    private FieldInfo? fiElevateFactor;
+    // Compiled-delegate field accessors for the two reflected hot-path
+    // writes. Lazy-initialized in the apply methods once physicsBehavior
+    // is first observed (so we resolve against the runtime type, which
+    // may be a subclass of EntityBehaviorControlledPhysics with shadowed
+    // fields). Pre-Phase-6 this was FieldInfo + SetValue, which boxed the
+    // float/double argument on every per-tick call.
+    private FieldAccessor<EntityBehaviorControlledPhysics, float>? stepHeightAccessor;
+    private FieldAccessor<EntityBehaviorControlledPhysics, double>? elevateAccessor;
     private float lastAppliedStepHeight = float.NaN;
     private double lastAppliedElevate = double.NaN;
-    private readonly BlockPos scratchPos = new BlockPos(0);
+
+    // Per-tick probe state — scratch BlockPos, BlockPos[5] column buffer,
+    // and the HashSet-cached blacklist (rebuilt on demand at mutation
+    // sites). One instance per ModSystem; client-side only.
+    private WorldProbe? worldProbe;
 
     private float ClampHeightClient(float height)
         => StepHeightClamp.Clamp(
@@ -185,10 +195,15 @@ public class StepUpAdvancedModSystem : ModSystem
             ModLog.Verbose(capi, "Normalized runtime StepHeight/StepSpeed (client floors; server caps only if enforced).");
         }
 
-        var basePhys = typeof(EntityBehaviorControlledPhysics);
-        fiElevateFactor = basePhys.GetField("elevateFactor", BindingFlags.Instance | BindingFlags.NonPublic)
-                       ?? basePhys.GetField("ElevateFactor", BindingFlags.Instance | BindingFlags.Public);
-        fiStepHeight = null;
+        // WorldProbe owns the per-tick scratch state (BlockPos, BlockPos[5],
+        // and the cached blacklist HashSet). Constructed before the first
+        // tick fires below.
+        worldProbe = new WorldProbe();
+
+        // stepHeightAccessor and elevateAccessor stay null here — they're
+        // lazy-init in their respective Apply methods once physicsBehavior
+        // is first observed, so we can resolve fields against the runtime
+        // type (which may be a subclass of EntityBehaviorControlledPhysics).
 
         stepUpEnabled = StepUpOptions.Current?.StepUpEnabled ?? true;
 
@@ -222,6 +237,13 @@ public class StepUpAdvancedModSystem : ModSystem
             // EnforcementState.IsEnforced now honors the flag verbatim;
             // no per-side override is needed at the receive site.
             ConfigSyncPacketMapper.Apply(StepUpOptions.Current, packet);
+
+            // The packet may have changed the server-side blacklist AND/OR
+            // flipped ServerEnforceSettings. Either invalidates the cached
+            // union (enforcement-flip changes whether the server list is
+            // composed in at all). Mark dirty unconditionally — the next
+            // probe call rebuilds from the new effective state.
+            worldProbe?.Blacklist.MarkDirty();
 
             if (!IsEnforced && toasts.ServerEnforcement.IsShown)
             {
@@ -321,6 +343,7 @@ public class StepUpAdvancedModSystem : ModSystem
 
         BlockBlacklistOptions.Current.BlockCodes.Add(blockCode);
         BlockBlacklistStore.Save(capi);
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.added-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
     }
     private TextCommandResult RemoveFromBlacklist(TextCommandCallingArgs arg)
@@ -341,6 +364,7 @@ public class StepUpAdvancedModSystem : ModSystem
 
         BlockBlacklistOptions.Current.BlockCodes.Remove(blockCode);
         BlockBlacklistStore.Save(capi);
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.removed-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
     }
 
@@ -364,6 +388,7 @@ public class StepUpAdvancedModSystem : ModSystem
 
         list!.Clear();
         BlockBlacklistStore.Save(capi);
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.cleared-client-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(removed.ToString())}");
     }
     private TextCommandResult ListBlacklist(TextCommandCallingArgs arg)
@@ -402,6 +427,12 @@ public class StepUpAdvancedModSystem : ModSystem
         // this write — broadcast explicitly so connected clients see
         // the new entry without waiting for /sua reload or reconnect.
         configSyncChannel?.BroadcastToAll();
+        // In SP, the server-side handler and the client's WorldProbe live
+        // in the same process — mark the cache dirty immediately so the
+        // next probe tick rebuilds. On a dedicated server, worldProbe is
+        // null and this is a no-op (remote clients invalidate via the
+        // broadcast → OnReceiveServerConfig path).
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.added-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
     }
     private TextCommandResult RemoveFromServerBlacklist(TextCommandCallingArgs arg)
@@ -426,6 +457,7 @@ public class StepUpAdvancedModSystem : ModSystem
         // broadcast explicitly so connected clients see the removal
         // without waiting for /sua reload or reconnect.
         configSyncChannel?.BroadcastToAll();
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.removed-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(blockCode)}");
     }
 
@@ -457,6 +489,7 @@ public class StepUpAdvancedModSystem : ModSystem
         // broadcast path doesn't fire either, so we have to broadcast
         // explicitly here. Same pattern as ReloadServerConfig.
         configSyncChannel?.BroadcastToAll();
+        worldProbe?.Blacklist.MarkDirty();
         return SuaCmd.Ok(SuaChat.L("cmd.cleared-server-blacklist"), $"{SuaChat.Arrow}{SuaChat.Val(removed.ToString())}");
     }
     private TextCommandResult ReloadServerConfig(TextCommandCallingArgs arg)
@@ -716,6 +749,10 @@ public class StepUpAdvancedModSystem : ModSystem
         currentElevateFactor = StepUpOptions.Current?.StepSpeed ?? currentElevateFactor;
         stepUpEnabled = StepUpOptions.Current?.StepUpEnabled ?? stepUpEnabled;
 
+        // The reload may have introduced new blacklist entries from disk
+        // (the SP user's typical "edit JSON + Home key" workflow).
+        worldProbe?.Blacklist.MarkDirty();
+
         lastAppliedStepHeight = float.NaN;
         lastAppliedElevate = double.NaN;
 
@@ -724,80 +761,29 @@ public class StepUpAdvancedModSystem : ModSystem
         SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Ok(SuaChat.L("config-reloaded"))}");
         return true;
     }
+    /// <summary>
+    /// Thin wrapper over <see cref="WorldProbe.NearBlacklistedBlock"/>.
+    /// Encodes the policy decision: when enforcement is off, the
+    /// server-side list is excluded from the union; the client-side list
+    /// is always consulted.
+    /// </summary>
     private bool IsNearBlacklistedBlock(IClientPlayer player)
     {
-        BlockPos playerPos = player.Entity.Pos.AsBlockPos;
-        IWorldAccessor world = player.Entity.World;
+        if (worldProbe == null) return false;
 
-        // Server list is server-owned: only consult when enforcement is
-        // active. With the Phase 3b hotfix-of-the-hotfix, IsEnforced is
-        // simply the value of ServerEnforceSettings — single-player no
-        // longer short-circuits to false. So in SP, an opted-in player
-        // (flag = true) will see the server list consulted; in SP without
-        // the flag, the server list is ignored even if populated. The
-        // client's own list is independent and always consulted.
-        var serverList = IsEnforced
-            ? (StepUpOptions.Current?.BlockBlacklist ?? new List<string>())
-            : new List<string>();
-        var clientList = BlockBlacklistOptions.Current?.BlockCodes ?? new List<string>();
+        // Caller composes the effective lists; WorldProbe.BlacklistCache
+        // observes a different reference (or null) when enforcement
+        // transitions, which the MarkBlacklistDirty hooks at the
+        // enforcement-change sites turn into a cache rebuild.
+        var serverList = IsEnforced ? StepUpOptions.Current?.BlockBlacklist : null;
+        var clientList = BlockBlacklistOptions.Current?.BlockCodes;
 
-        if (serverList.Count == 0 && clientList.Count == 0) return false;
-
-        // Always check the 8-cell ring at distance 1 from the player's
-        // current cell. This catches the "approaching slowly" case.
-        var positionsToCheck = new List<BlockPos>(14)
-        {
-            playerPos.EastCopy(),
-            playerPos.WestCopy(),
-            playerPos.NorthCopy(),
-            playerPos.SouthCopy(),
-            playerPos.EastCopy().NorthCopy(),
-            playerPos.EastCopy().SouthCopy(),
-            playerPos.WestCopy().NorthCopy(),
-            playerPos.WestCopy().SouthCopy(),
-        };
-
-        // Velocity-aware lookahead. The proximity probe runs at 50 ms
-        // (20 Hz). At high StepSpeed (>2), the elevate factor is high
-        // enough that a step-up animation completes faster than a probe
-        // tick — a player can transition from "outside the distance-1
-        // ring" to "stepping onto a blacklisted block" within a single
-        // probe window and the static ring never observes them adjacent.
-        // Projecting the player's motion onto the cardinal axes and
-        // probing 1–2 extra cells in each dominant direction closes
-        // that gap with negligible cost on the slow path.
-        //
-        // Thresholds tuned to be well below sprint speed (~0.15-0.20)
-        // so the lookahead doesn't fire on idle drift, and to add a
-        // second forward cell only when the player is sprinting/falling
-        // toward the blacklisted block.
-        Vec3d motion = player.Entity.Pos.Motion;
-        double absX = Math.Abs(motion.X);
-        double absZ = Math.Abs(motion.Z);
-
-        if (absX > 0.05)
-        {
-            int dx = motion.X > 0 ? 1 : -1;
-            positionsToCheck.Add(playerPos.AddCopy(2 * dx, 0, 0));
-            if (absX > 0.15) positionsToCheck.Add(playerPos.AddCopy(3 * dx, 0, 0));
-        }
-        if (absZ > 0.05)
-        {
-            int dz = motion.Z > 0 ? 1 : -1;
-            positionsToCheck.Add(playerPos.AddCopy(0, 0, 2 * dz));
-            if (absZ > 0.15) positionsToCheck.Add(playerPos.AddCopy(0, 0, 3 * dz));
-        }
-
-        foreach (BlockPos pos in positionsToCheck)
-        {
-            var block = world.BlockAccessor.GetBlock(pos);
-            var code = block?.Code.ToString();
-            if (code == null) continue;
-
-            if (BlacklistMatcher.MatchesAny(code, serverList, clientList))
-                return true;
-        }
-        return false;
+        return worldProbe.NearBlacklistedBlock(
+            player.Entity.World,
+            player.Entity.Pos.AsBlockPos,
+            player.Entity.Pos.Motion,
+            serverList,
+            clientList);
     }
     private void ApplyStepHeightToPlayer()
     {
@@ -842,27 +828,24 @@ public class StepUpAdvancedModSystem : ModSystem
 
         if (Math.Abs(stepHeight - lastAppliedStepHeight) < 1e-4f) return;
 
-        try
+        // Lazy-init against the runtime type — physicsBehavior may be a
+        // subclass of EntityBehaviorControlledPhysics with a shadowed
+        // StepHeight field. The compiled-delegate setter eliminates the
+        // per-call boxing that FieldInfo.SetValue performed pre-Phase-6.
+        stepHeightAccessor ??= new FieldAccessor<EntityBehaviorControlledPhysics, float>(
+            physicsBehavior.GetType(), "StepHeight", "stepHeight");
+
+        if (stepHeightAccessor.TrySet(physicsBehavior, stepHeight))
         {
-            Type type = physicsBehavior.GetType();
-            fiStepHeight ??= type.GetField("StepHeight") ?? type.GetField("stepHeight");
-            if (fiStepHeight != null)
-            {
-                fiStepHeight.SetValue(physicsBehavior, stepHeight);
-                lastAppliedStepHeight = stepHeight;
-            }
-            else
-            {
-                if (!stepHeightWarnedOnce)
-                {
-                    SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Err(SuaChat.L("error.stepheight-field-missing"))}");
-                    stepHeightWarnedOnce = true;
-                }
-            }
+            lastAppliedStepHeight = stepHeight;
         }
-        catch (Exception ex)
+        else
         {
-            SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Err(SuaChat.L("error.stepheight-set-failed"))} {SuaChat.Muted(ex.Message)}");
+            if (!stepHeightWarnedOnce)
+            {
+                SuaChat.Client(capi, $"{SuaChat.Tag} {SuaChat.Err(SuaChat.L("error.stepheight-field-missing"))}");
+                stepHeightWarnedOnce = true;
+            }
         }
     }
     private void ApplyElevateFactorToPlayer(float dt)
@@ -880,25 +863,20 @@ public class StepUpAdvancedModSystem : ModSystem
 
         if (Math.Abs(desiredElevate - lastAppliedElevate) < 1e-6) return;
 
-        var fld = fiElevateFactor
-                  ?? physicsBehavior.GetType().GetField("elevateFactor", BindingFlags.Instance | BindingFlags.NonPublic)
-                  ?? physicsBehavior.GetType().GetField("ElevateFactor", BindingFlags.Instance | BindingFlags.Public);
+        // Same lazy-init pattern as stepHeightAccessor — resolved against
+        // the runtime type. The VS field name is lowercase 'elevateFactor';
+        // 'ElevateFactor' is a defensive fallback for future API renames.
+        elevateAccessor ??= new FieldAccessor<EntityBehaviorControlledPhysics, double>(
+            physicsBehavior.GetType(), "elevateFactor", "ElevateFactor");
 
-        if (fld != null)
+        if (elevateAccessor.TrySet(physicsBehavior, desiredElevate))
         {
-            try
-            {
-                fld.SetValue(physicsBehavior, desiredElevate);
-                lastAppliedElevate = desiredElevate;
-            }
-            catch (Exception ex)
-            {
-                if (!elevateWarnedOnce)
-                {
-                    ModLog.Warning(capi, "Failed to set elevateFactor via reflection: {0}", ex.Message);
-                    elevateWarnedOnce = true;
-                }
-            }
+            lastAppliedElevate = desiredElevate;
+        }
+        else if (!elevateWarnedOnce)
+        {
+            ModLog.Warning(capi, "Failed to resolve elevateFactor field on physics behavior; speed adjustments disabled.");
+            elevateWarnedOnce = true;
         }
     }
 
@@ -941,67 +919,29 @@ public class StepUpAdvancedModSystem : ModSystem
             ModLog.Verbose(sapi, "Config pushed (server enforcement disabled, allows client-side config again).");
     }
 
-    private static bool IsSolidBlock(IWorldAccessor world, BlockPos pos)
-    {
-        var block = world.BlockAccessor.GetBlock(pos);
-        return block?.CollisionBoxes != null && block.CollisionBoxes.Length > 0;
-    }
-
-    private bool HasLandingSupport(IWorldAccessor world, BlockPos basePos, double yawRad, int dist, float requestedStep)
-    {
-        // Below ~1 block of rise, the foot is still inside the player's
-        // current cell during the step animation — no need to verify a
-        // landing surface.
-        if (requestedStep < 0.95f) return true;
-
-        var (sx, sz) = CeilingProbeMath.ForwardOffset(yawRad, dist);
-        int fwdX = basePos.X + sx;
-        int fwdZ = basePos.Z + sz;
-
-        int maxRise = CeilingProbeMath.MaxRiseClamp(requestedStep, hardCap: 2);
-        if (maxRise <= 0) return true;
-
-        int yTopSupport = basePos.Y + maxRise - 1;
-        for (int y = yTopSupport; y >= basePos.Y; y--)
-        {
-            // Per-iteration BlockPos allocation matches pre-Phase-5
-            // behavior. Phase 6 swaps this to a scratch buffer.
-            var pos = new BlockPos(fwdX, y, fwdZ);
-            var b = world.BlockAccessor.GetBlock(pos);
-            if (b?.CollisionBoxes != null && b.CollisionBoxes.Length > 0)
-                return true;
-        }
-        return false;
-    }
-
-    private float DistanceToCeilingAt(IWorldAccessor world, BlockPos origin, float maxCheck, int startDy)
-    {
-        if (startDy < 1) startDy = 1;
-        int steps = (int)Math.Ceiling(maxCheck) + 1;
-        float pad = StepUpOptions.Current.CeilingHeadroomPad;
-
-        for (int dy = startDy; dy <= steps; dy++)
-        {
-            scratchPos.Set(origin.X, origin.Y + dy, origin.Z);
-            if (IsSolidBlock(world, scratchPos))
-                return Math.Max(0f, dy - pad);
-        }
-        return maxCheck;
-    }
-
+    /// <summary>
+    /// Orchestrator: combines the "here" clearance check with the
+    /// forward-column check guarded by <c>RequireForwardSupport</c> and
+    /// <c>ForwardProbeCeiling</c> flags. Per-cell world queries live on
+    /// <see cref="WorldProbe"/>; math lives on
+    /// <see cref="CeilingProbeMath"/>; this method holds the policy.
+    /// </summary>
     private float DistanceToCeiling(IClientPlayer player, float requestedStep)
     {
+        if (worldProbe == null) return requestedStep;
+
         var world = player.Entity.World;
         var basePos = player.Entity.Pos.AsBlockPos;
         var cfg = StepUpOptions.Current;
 
-        float hereClear = DistanceToCeilingAt(world, basePos, requestedStep, startDy: 1);
+        float hereClear = worldProbe.DistanceToCeilingAt(
+            world, basePos, requestedStep, startDy: 1, headroomPad: cfg.CeilingHeadroomPad);
 
         if (!cfg.ForwardProbeCeiling || cfg.ForwardProbeDistance <= 0)
             return hereClear;
 
         double yaw = player.Entity.Pos.Yaw;
-        bool supportedAhead = HasLandingSupport(world, basePos, yaw, cfg.ForwardProbeDistance, requestedStep);
+        bool supportedAhead = worldProbe.HasLandingSupport(world, basePos, yaw, cfg.ForwardProbeDistance, requestedStep);
         float tinySafe = Math.Max(0.25f, cfg.DefaultHeight);
         if (cfg.RequireForwardSupport && !supportedAhead) return Math.Min(hereClear, tinySafe);
 
@@ -1010,48 +950,18 @@ public class StepUpAdvancedModSystem : ModSystem
             basePos.Y, requestedStep, entHeight, cfg.CeilingHeadroomPad);
         if (yTopInclusive < yFrom) return hereClear;
 
-        var columns = BuildForwardColumns(basePos, yaw, cfg.ForwardProbeDistance, cfg.ForwardProbeSpan);
+        int columnCount = worldProbe.BuildForwardColumns(basePos, yaw, cfg.ForwardProbeDistance, cfg.ForwardProbeSpan);
         bool blockedAll = true;
-        foreach (var col in columns)
+        for (int i = 0; i < columnCount; i++)
         {
-            if (!ColumnHasSolid(world, col, yFrom, yTopInclusive + 1))
+            var col = worldProbe.GetColumn(i);
+            if (!worldProbe.ColumnHasSolid(world, col, yFrom, yTopInclusive + 1))
             {
                 blockedAll = false;
                 break;
             }
         }
         return blockedAll ? Math.Min(hereClear, tinySafe) : hereClear;
-    }
-
-    private static bool ColumnHasSolid(IWorldAccessor world, BlockPos posXZ, int yFrom, int yToExclusive)
-    {
-        var bpos = new BlockPos(posXZ.X, 0, posXZ.Z);
-        for (int y = yFrom; y < yToExclusive; y++)
-        {
-            bpos.Y = y;
-            var block = world.BlockAccessor.GetBlock(bpos);
-            if (block?.CollisionBoxes != null && block.CollisionBoxes.Length > 0)
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Composes absolute world positions from the offset list produced by
-    /// <see cref="CeilingProbeMath.ForwardSpanOffsets"/>. The math (forward
-    /// direction, perpendicular axis, span fan-out) lives in the Domain
-    /// layer; this method is the BlockPos-composition adapter.
-    /// </summary>
-    private static BlockPos[] BuildForwardColumns(BlockPos basePos, double yawRad, int dist, int span)
-    {
-        var offsets = CeilingProbeMath.ForwardSpanOffsets(yawRad, dist, span);
-        var cols = new BlockPos[offsets.Count];
-        int i = 0;
-        foreach (var (dx, dz) in offsets)
-        {
-            cols[i++] = new BlockPos(basePos.X + dx, basePos.Y, basePos.Z + dz);
-        }
-        return cols;
     }
 
     private void QueueConfigSave(ICoreAPI api)

@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Phase 6 (Hot-path allocation cleanup):**
+  - New `Infrastructure/Probes/WorldProbe.cs`: owns per-tick scratch
+    state — a single reusable `BlockPos`, a `BlockPos[5]` column buffer
+    for forward-span fan-out, and a static `(int dx, int dz)[8]` ring
+    offset table. The five probe primitives (`NearBlacklistedBlock`,
+    `DistanceToCeilingAt`, `HasLandingSupport`, `BuildForwardColumns` +
+    `GetColumn`, `ColumnHasSolid`) are now allocation-free on the hot
+    path. `StepUpAdvancedModSystem.DistanceToCeiling` keeps its role as
+    the orchestrator that holds the policy (ceiling-guard flags,
+    forward-probe distance/span, headroom pad); the world queries and
+    scratch state move out.
+  - New `Infrastructure/Probes/BlacklistCache.cs`: HashSet-backed merged
+    blacklist with dirty-flag invalidation. The Phase 5
+    `BlacklistMatcher.MatchesAny` did O(n+m) per cell with two list
+    scans plus the cost of composing fallback `List<string>` objects on
+    every probe call; this caches the union once and rebuilds only when
+    a mutation site explicitly marks it dirty. The cache is initialized
+    `dirty = true` so the first probe always builds without the caller
+    needing to remember.
+  - New `Infrastructure/Reflection/FieldAccessor<TTarget, TValue>`:
+    compiled-delegate field setter built via `System.Linq.Expressions`.
+    Replaces the per-call `FieldInfo.SetValue(object, object)` pattern
+    that boxed the `float`/`double` argument on every tick. Resolves
+    fields by candidate-list order (preserves the
+    `"StepHeight"` ⇢ `"stepHeight"` fallback). Setter-only by design.
+  - **Eight blacklist mutation sites now call
+    `worldProbe?.Blacklist.MarkDirty()`:** the three client-side
+    handlers (`.sua add`/`remove`/`remove all`), the three server-side
+    handlers (`/sua add`/`remove`/`remove all` — no-op when worldProbe
+    is null on a dedicated server, the broadcast path covers remote
+    clients via `OnReceiveServerConfig`), `OnReceiveServerConfig` (also
+    covers enforcement-flag transitions, which change whether the
+    server list is composed into the union), and `OnReloadConfig` (the
+    Home-key reload path, which is the typical SP "edit JSON + reload"
+    workflow).
+  - `StepUpAdvancedModSystem` shed ~91 lines (1088 → 997). Deleted:
+    `fiStepHeight` / `fiElevateFactor` FieldInfo fields, the
+    instance-bound `scratchPos`, the `IsSolidBlock` static helper, the
+    `HasLandingSupport` / `DistanceToCeilingAt` / `ColumnHasSolid` /
+    `BuildForwardColumns` methods (moved to `WorldProbe`), the eager
+    `typeof(EntityBehaviorControlledPhysics).GetField(...)` init, and
+    the unused `System.Reflection` / `StepUpAdvanced.Domain.Blocks`
+    `using` directives. `IsNearBlacklistedBlock` is now a 14-line
+    wrapper that encodes only the enforcement-policy decision (whether
+    to compose the server list).
+  - **Per-tick allocation surface (measured by manual accounting,
+    pre-vs-post):** roughly **25-35 → ~10 small allocations** per 50 ms
+    tick. The remaining floor is the unavoidable `block.Code.ToString()`
+    string allocation per probed cell — fixable in a future phase by
+    caching `AssetLocation` references directly, but the API surface
+    change to support that is larger than the win. Reflection writes
+    drop from 2 boxed-argument `SetValue` calls per change to 2 direct
+    delegate invocations.
+  - **Tests:** two new files. `BlacklistCacheTests` (8 cases) pins
+    initial-dirty state, union-rebuild, dedup across lists, the
+    clean-no-op contract, `MarkDirty`-then-rebuild, null inputs, the
+    empty-to-populated transition, and HashSet polymorphism (any
+    `IReadOnlyCollection<string>` is accepted). `FieldAccessorTests`
+    (8 cases) pins public-field resolution, private-field resolution,
+    no-match → `IsAvailable = false`, candidate-list fallback ordering,
+    public `TrySet`, private `TrySet` (with a `GetPrivateDouble` test
+    helper to avoid reflection inside the assertion), `TrySet` on a
+    missing accessor returns false without throwing, and the
+    `float`-accessor-on-`double`-field type-conversion path.
+    **Total: 16 new cases across 2 files → 105 cases / 12 files.**
+    `WorldProbe` itself is not unit-tested (wrapping `IWorldAccessor`
+    for mockability would exceed the LOC of the methods under test —
+    same threshold applied to `KeyHoldTracker` and `HotkeyBinder` in
+    Phase 4).
+
 - **Phase 5 (Domain extraction — framework-free math):**
   - New `Domain/Physics/StepHeightClamp.cs` and
     `Domain/Physics/ElevateFactorMath.cs`: pure-function clamps with
