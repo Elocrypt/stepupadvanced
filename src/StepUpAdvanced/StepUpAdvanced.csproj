@@ -1,0 +1,94 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>StepUpAdvanced</AssemblyName>
+    <RootNamespace>StepUpAdvanced</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\Mods\StepUpAdvanced</OutputPath>
+    <!-- 1591: missing XML doc comment on public member. We document the public-facing
+         API but don't require docs on every internal helper. -->
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <Version>1.3.1</Version>
+    <AssemblyVersion>1.3.1.0</AssemblyVersion>
+    <FileVersion>1.3.1.0</FileVersion>
+    <InformationalVersion>1.3.1</InformationalVersion>
+    <Authors>Elocrypt</Authors>
+    <Product>StepUp Advanced</Product>
+    <Description>Automatically step up blocks without jumping. Fully configurable and toggleable!</Description>
+    <Copyright>Copyright (c) 2026 Elocrypt</Copyright>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+	<LangVersion>13</LangVersion>
+  </PropertyGroup>
+
+  <!-- Vintage Story DLL references.
+       Private=false: do NOT copy these DLLs into the mod output folder.
+       VS provides them at runtime; copying them produces a bloated zip and
+       risks version conflicts. The test project sets Private=true so xunit
+       can resolve them at test time. -->
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(VintagestoryDir)\Lib\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="protobuf-net">
+      <HintPath>$(VintagestoryDir)\Lib\protobuf-net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VintagestoryDir)\VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSEssentials">
+      <HintPath>$(VintagestoryDir)\Mods\VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- VSSurvivalMod hosts EntityBehaviorPlayerPhysics in Vintagestory.GameContent;
+         the Harmony patch in EntityBehaviorPlayerPhysicsPatch.cs needs this. -->
+    <Reference Include="VSSurvivalMod">
+      <HintPath>$(VintagestoryDir)\Mods\VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Grant the test assembly access to internal types. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="StepUpAdvanced.Tests" />
+  </ItemGroup>
+
+  <!-- Mod metadata and assets are copied next to the DLL so the output folder is a ready-to-load mod. -->
+  <ItemGroup>
+    <None Include="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="modicon.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('modicon.png')" />
+    <Content Include="assets\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    Dev-time convenience: after a successful build, copy the ready-to-load mod into the
+    user-mods folder under the active data path so F5 launches a game with the latest
+    build available. The data path is the directory VS creates/uses when launched with
+    the datapath argument, matching the VintagestoryData property in Directory.Build.props.
+    Skipped in CI and release packaging via /p:DeployMod=false.
+  -->
+  <Target Name="DeployToVintagestoryMods" AfterTargets="Build"
+          Condition="'$(DeployMod)' != 'false' AND Exists('$(VintagestoryData)')">
+    <PropertyGroup>
+      <DeployPath>$(VintagestoryData)\Mods\$(AssemblyName)</DeployPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DeployFiles Include="$(OutputPath)**\*.*" Exclude="$(OutputPath)**\*.pdb;$(OutputPath)**\ref\**" />
+    </ItemGroup>
+    <MakeDir Directories="$(DeployPath)" />
+    <Copy SourceFiles="@(_DeployFiles)"
+          DestinationFolder="$(DeployPath)\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="[StepUp Advanced] Deployed to $(DeployPath)" Importance="high" />
+  </Target>
+  
+  <Target Name="ShowVintagestoryDir" BeforeTargets="Build">
+    <Message Text="VintagestoryDir=$(VintagestoryDir)" Importance="High" />
+  </Target>
+
+</Project>

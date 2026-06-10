@@ -134,4 +134,46 @@ public class CeilingProbeMathTests
 
         yTop.Should().BeLessThan(yFrom);
     }
+
+    /// <summary>
+    /// A full block or bottom slab reports <c>minBoxY1 = 0</c>, so clearance is
+    /// the legacy <c>dy - pad</c> -- pins backward compatibility for the common case.
+    /// </summary>
+    [Fact]
+    public void ClearanceToObstruction_FullBlock_ReturnsDyMinusPad()
+    {
+        CeilingProbeMath.ClearanceToObstruction(dy: 2, minBoxY1: 0f, headroomPad: 0.3f)
+            .Should().BeApproximately(1.7f, 1e-4f);
+    }
+
+    /// <summary>
+    /// A top slab's collision box bottom sits mid-cell (~0.5), so the obstruction
+    /// is half a block higher than the cell floor -- the fix that stops the
+    /// ceiling guard falsely blocking a climb under a top slab.
+    /// </summary>
+    [Fact]
+    public void ClearanceToObstruction_TopSlab_AddsHalfBlockClearance()
+    {
+        CeilingProbeMath.ClearanceToObstruction(dy: 1, minBoxY1: 0.5f, headroomPad: 0.3f)
+            .Should().BeApproximately(1.2f, 1e-4f);
+    }
+
+    [Fact]
+    public void ClearanceToObstruction_FractionalPartialBlock_IsProportional()
+    {
+        CeilingProbeMath.ClearanceToObstruction(dy: 1, minBoxY1: 0.25f, headroomPad: 0.2f)
+            .Should().BeApproximately(1.05f, 1e-4f);
+    }
+
+    /// <summary>
+    /// When the pad exceeds the obstruction height the raw clearance goes
+    /// negative; the method floors it at zero so callers never see a negative
+    /// step allowance.
+    /// </summary>
+    [Fact]
+    public void ClearanceToObstruction_PadExceedsObstruction_FlooredAtZero()
+    {
+        CeilingProbeMath.ClearanceToObstruction(dy: 1, minBoxY1: 0f, headroomPad: 1.5f)
+            .Should().Be(0f);
+    }
 }

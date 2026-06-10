@@ -115,4 +115,53 @@ public class FieldAccessorTests
 
         target.GetPrivateDouble().Should().Be(3.5);
     }
+
+    // ─── TryGet (read-back) ─────────────────────────────────────────────
+
+    [Fact]
+    public void TryGet_OnAvailableAccessor_ReadsPublicField()
+    {
+        var target = new Target { PublicFloat = 7.5f };
+        var accessor = new FieldAccessor<Target, float>(typeof(Target), "PublicFloat");
+
+        accessor.TryGet(target, out float value).Should().BeTrue();
+        value.Should().Be(7.5f);
+    }
+
+    /// <summary>
+    /// Read-back reflects an external mutation rather than any value the
+    /// accessor previously wrote — the property the #6 fix depends on.
+    /// </summary>
+    [Fact]
+    public void TryGet_ReflectsExternalMutation()
+    {
+        var target = new Target();
+        var accessor = new FieldAccessor<Target, float>(typeof(Target), "PublicFloat");
+
+        accessor.TrySet(target, 1.2f).Should().BeTrue();
+        target.PublicFloat = 0.6f; // simulate an external reset of the field
+
+        accessor.TryGet(target, out float value).Should().BeTrue();
+        value.Should().Be(0.6f);
+    }
+
+    [Fact]
+    public void TryGet_WithTypeConversion_FloatAccessorReadsDoubleField()
+    {
+        var target = new Target();
+        var accessor = new FieldAccessor<Target, float>(typeof(Target), "PrivateDouble");
+        accessor.TrySet(target, 4.25f).Should().BeTrue();
+
+        accessor.TryGet(target, out float value).Should().BeTrue();
+        value.Should().Be(4.25f);
+    }
+
+    [Fact]
+    public void TryGet_OnMissingField_ReturnsFalseWithoutThrowing()
+    {
+        var accessor = new FieldAccessor<Target, float>(typeof(Target), "NonExistent");
+
+        accessor.TryGet(new Target(), out float value).Should().BeFalse();
+        value.Should().Be(default);
+    }
 }

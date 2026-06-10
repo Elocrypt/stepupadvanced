@@ -17,7 +17,7 @@ namespace StepUpAdvanced.Core;
 /// caps and the server blacklist on themselves. The flag means what it says.
 /// </para>
 /// <para>
-/// The <paramref name="side"/> and <paramref name="isSinglePlayer"/>
+/// The <c>side</c> and <c>isSinglePlayer</c>
 /// parameters are retained even though the body no longer reads them.
 /// Existing call sites in <c>StepUpAdvancedModSystem.IsEnforced</c> and the
 /// unit tests pass them in unmodified, and the signature gives future

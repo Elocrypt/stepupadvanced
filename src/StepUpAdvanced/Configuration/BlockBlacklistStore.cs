@@ -43,13 +43,18 @@ internal static class BlockBlacklistStore
             bool changed = false;
             loaded.BlockCodes ??= new List<string>();
 
+            // Capture the (now-guaranteed-non-null) list into a local so
+            // subsequent reads don't trigger CS8602. Property-write narrowing
+            // via ??= isn't reliable across multiple accesses; a local is.
+            var codes = loaded.BlockCodes;
+
             // Dedup case-insensitively, then sort case-insensitively. If the
             // result differs from the loaded list (different size after dedup),
             // mark dirty so we save the normalized form back.
-            var uniq = new HashSet<string>(loaded.BlockCodes ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+            var uniq = new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
             var normalized = uniq.ToList();
             normalized.Sort(StringComparer.OrdinalIgnoreCase);
-            if (loaded.BlockCodes.Count != normalized.Count) changed = true;
+            if (codes.Count != normalized.Count) changed = true;
             loaded.BlockCodes = normalized;
 
             if (loaded.SchemaVersion < 1) { loaded.SchemaVersion = 1; changed = true; }

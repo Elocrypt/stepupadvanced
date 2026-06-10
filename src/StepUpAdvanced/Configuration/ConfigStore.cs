@@ -23,7 +23,7 @@ namespace StepUpAdvanced.Configuration;
 /// itself is now a pure data class.
 /// </para>
 /// <para>
-/// Phase 2b will pull <see cref="Migrate"/> out into the
+/// Phase 2b will pull <see cref="MergeAndMigrate"/> out into the
 /// <c>Configuration/Migrations/</c> folder with one file per schema version.
 /// For now, the existing single-method form is preserved.
 /// </para>
@@ -244,7 +244,7 @@ internal static class ConfigStore
 
     /// <summary>
     /// Runtime invariant enforcement that runs every load. Differs from
-    /// <see cref="Migrate"/> in that it's not version-gated — it always
+    /// <see cref="MergeAndMigrate"/> in that it's not version-gated — it always
     /// runs and re-establishes invariants regardless of where the config
     /// came from.
     /// </summary>
@@ -381,24 +381,6 @@ internal static class ConfigStore
             }
         }
     }
-
-    /// <summary>
-    /// Replaces the current options with a new instance.
-    /// </summary>
-    /// <remarks>
-    /// As of Phase 3b, this method is no longer called from the network
-    /// receive path — the wholesale-replace was the bug that motivated
-    /// the wire-shape decoupling. The receive handler now uses
-    /// <c>ConfigSyncPacketMapper.Apply</c> to merge enforcement-only
-    /// fields into <see cref="StepUpOptions.Current"/>, preserving
-    /// every client-local field (step height/speed, increments, probe
-    /// tunables, QuietMode, etc.).
-    ///
-    /// Retained as a defensive single-line facade in case a future
-    /// caller needs an in-place options swap. Revisit for removal in
-    /// Phase 8 once the codebase has settled.
-    /// </remarks>
-    public static void UpdateConfig(StepUpOptions newConfig) => StepUpOptions.Current = newConfig;
 
     /// <summary>
     /// Internal predicate: should server caps be enforced during load-time

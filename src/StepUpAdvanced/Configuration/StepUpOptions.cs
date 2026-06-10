@@ -71,6 +71,56 @@ public class StepUpOptions
     [ProtoMember(27), DefaultValue(false)] public bool QuietMode { get; set; } = false;
 
     /// <summary>
+    /// When <c>true</c>, the mod's enhanced step height applies only while
+    /// the player is sprinting; at all other times the step height falls back
+    /// to VS's vanilla baseline. Client feel-preference — deliberately NOT in
+    /// <c>ConfigSyncPacket</c>, so the server never dictates it (same scope as
+    /// <see cref="QuietMode"/>). Defaults <c>false</c>, so existing behavior is
+    /// preserved until a user opts in; a missing JSON key parses to <c>false</c>,
+    /// which is why this needs no schema bump or migration.
+    /// </summary>
+    /// <remarks>
+    /// Gating happens on the HEIGHT axis only — the rise-speed axis lives in
+    /// the Harmony-patched <c>TryStepSmooth</c>, which already differentiates
+    /// sprint/sneak/walk. Collapsing the step height to the vanilla baseline is
+    /// sufficient to make "step up only while sprinting" behave. Evaluated each
+    /// tick by <c>StepUpGate.ShouldApplyStepUp</c>.
+    /// </remarks>
+    [ProtoMember(28), DefaultValue(false)] public bool SprintOnlyStepUp { get; set; } = false;
+
+    /// <summary>
+    /// When <c>true</c>, the mod's enhanced step height is suppressed while the
+    /// player is sneaking (the step height falls back to VS's vanilla baseline),
+    /// letting players sneak for precise edge placement without auto-stepping.
+    /// Client feel-preference; same scope, default, and height-only semantics as
+    /// <see cref="SprintOnlyStepUp"/>. Evaluated each tick by
+    /// <c>StepUpGate.ShouldApplyStepUp</c>; sneak suppression takes precedence
+    /// over <see cref="SprintOnlyStepUp"/> if both ever apply on the same tick.
+    /// </summary>
+    [ProtoMember(29), DefaultValue(false)] public bool DisableStepUpWhileSneaking { get; set; } = false;
+
+    /// <summary>
+    /// When <c>true</c>, the mod's enhanced step height is suppressed while the
+    /// player is airborne (not on ground and not swimming); the step height
+    /// falls back to VS's vanilla baseline. Targets the "step-up clears gaps I
+    /// fell just short of" reports: a tall step height makes the brief
+    /// ground-contact of a landing/edge-catch snap the player up much further
+    /// than vanilla, reading as airborne stepping. Keeping the height at the
+    /// baseline throughout the airborne descent makes those edge-catches use
+    /// vanilla reach. Client feel-preference; same scope, default, and
+    /// height-only semantics as <see cref="SprintOnlyStepUp"/>. Evaluated each
+    /// tick by <c>StepUpGate.ShouldApplyStepUp</c>.
+    /// </summary>
+    /// <remarks>
+    /// "Airborne" mirrors vanilla's own step gate (<c>!OnGround &amp;&amp;
+    /// !Swimming</c>) — swimming is NOT treated as airborne. Ground-initiated
+    /// steps are unaffected: they fire from a grounded tick where the enhanced
+    /// height was already written, and the brief lift of the rise itself
+    /// happens after the field is read.
+    /// </remarks>
+    [ProtoMember(30), DefaultValue(false)] public bool DisableStepUpWhileAirborne { get; set; } = false;
+
+    /// <summary>
     /// Ambient global access to the active options. Reads happen everywhere;
     /// writes happen only inside <see cref="ConfigStore"/> (hence the
     /// <c>internal</c> setter).

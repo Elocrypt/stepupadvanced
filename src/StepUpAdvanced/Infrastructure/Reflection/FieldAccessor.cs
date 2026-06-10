@@ -5,10 +5,11 @@ using System.Reflection;
 namespace StepUpAdvanced.Infrastructure.Reflection;
 
 /// <summary>
-/// Compiled-delegate field setter. Replaces the per-call
-/// <see cref="FieldInfo.SetValue(object, object)"/> pattern, which boxes
-/// value-type arguments on every invocation (a <c>float</c> setter call
-/// allocates ~16 bytes per write on .NET).
+/// Compiled-delegate field accessor (setter + getter). Replaces the
+/// per-call <see cref="FieldInfo.SetValue(object, object)"/> /
+/// <see cref="FieldInfo.GetValue(object)"/> pattern, which boxes value-type
+/// arguments/returns on every invocation (a <c>float</c> access allocates
+/// ~16 bytes per call on .NET).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,14 +27,16 @@ namespace StepUpAdvanced.Infrastructure.Reflection;
 /// fall back to a one-time user-facing warning.
 /// </para>
 /// <para>
-/// Setter-only by design. Getting reflected field values isn't on the
-/// hot path here; <see cref="FieldInfo.GetValue"/> can be used directly
-/// if ever needed.
+/// Both a setter and a getter delegate are compiled at construction from the
+/// same resolved field. The getter exists for read-back verification on the
+/// hot path (see <see cref="TryGet"/>); both are no-ops returning
+/// <c>false</c> when the field can't be resolved.
 /// </para>
 /// </remarks>
 internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
 {
     private readonly Action<TTarget, TValue>? setter;
+    private readonly Func<TTarget, TValue>? getter;
 
     /// <summary>
     /// True when the field was resolved and a setter delegate compiled.
@@ -58,6 +61,7 @@ internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
 
         ResolvedFieldName = fi.Name;
         setter = CompileSetter(fi);
+        getter = CompileGetter(fi);
     }
 
     /// <summary>
@@ -69,6 +73,33 @@ internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
     {
         if (setter == null) return false;
         setter(target, value);
+        return true;
+    }
+
+    /// <summary>
+    /// Reads the field on <paramref name="target"/> into
+    /// <paramref name="value"/>. Returns <c>true</c> on success, <c>false</c>
+    /// when the accessor wasn't available (in which case <paramref name="value"/>
+    /// is <c>default</c>). Like the setter, this is a compiled delegate — no
+    /// per-call boxing of the returned value type, unlike
+    /// <see cref="FieldInfo.GetValue(object)"/>.
+    /// </summary>
+    /// <remarks>
+    /// Added in Phase 8 for read-back verification in
+    /// <c>PhysicsFieldWriter.WriteStepHeight</c>: comparing the desired value
+    /// against the LIVE field (rather than a cached last-written value) so an
+    /// external reset of the physics behavior — respawn, dimension change, or
+    /// another mod re-initializing it — can't leave a stale cache thinking the
+    /// field is already correct.
+    /// </remarks>
+    public bool TryGet(TTarget target, out TValue value)
+    {
+        if (getter == null)
+        {
+            value = default!;
+            return false;
+        }
+        value = getter(target);
         return true;
     }
 
@@ -102,6 +133,24 @@ internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
 
         var assignment = Expression.Assign(fieldAccess, assignedValue);
         var lambda = Expression.Lambda<Action<TTarget, TValue>>(assignment, targetParam, valueParam);
+        return lambda.Compile();
+    }
+
+    private static Func<TTarget, TValue> CompileGetter(FieldInfo fi)
+    {
+        // Build the lambda: (target) => (TValue)target.<field>;
+        // The cast is only emitted when the field's actual type and TValue
+        // differ — symmetric with CompileSetter. In the common matching-type
+        // case the read is direct.
+        var targetParam = Expression.Parameter(typeof(TTarget), "target");
+        Expression fieldAccess = Expression.Field(targetParam, fi);
+
+        if (fi.FieldType != typeof(TValue))
+        {
+            fieldAccess = Expression.Convert(fieldAccess, typeof(TValue));
+        }
+
+        var lambda = Expression.Lambda<Func<TTarget, TValue>>(fieldAccess, targetParam);
         return lambda.Compile();
     }
 }

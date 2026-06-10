@@ -1,7 +1,8 @@
+using StepUpAdvanced.Domain.Probes;
 using System;
 using System.Collections.Generic;
-using StepUpAdvanced.Domain.Probes;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 
 namespace StepUpAdvanced.Infrastructure.Probes;
@@ -54,7 +55,16 @@ internal sealed class WorldProbe
     private const double VelocityLookaheadThreshold1 = 0.05;
     private const double VelocityLookaheadThreshold2 = 0.15;
 
-    private readonly BlockPos scratchPos = new();
+    /// <summary>
+    /// Overworld dimension id. StepUp Advanced probes operate exclusively on
+    /// the player's ground locomotion in the overworld, never inside boats or
+    /// other mini-dimensions, so a fixed value is correct. <c>BlockPos.Set(int, int, int)</c>
+    /// preserves the existing dimension across reuse, so the construction-time
+    /// dimension persists through every <see cref="scratchPos"/> mutation.
+    /// </summary>
+    private const int OverworldDimensionId = 0;
+
+    private readonly BlockPos scratchPos = new(OverworldDimensionId);
     private readonly BlockPos[] columnScratch = new BlockPos[5];
 
     /// <summary>
@@ -68,7 +78,7 @@ internal sealed class WorldProbe
     {
         for (int i = 0; i < columnScratch.Length; i++)
         {
-            columnScratch[i] = new BlockPos();
+            columnScratch[i] = new BlockPos(OverworldDimensionId);
         }
     }
 
@@ -135,10 +145,14 @@ internal sealed class WorldProbe
     }
 
     /// <summary>
-    /// Returns the first solid-block Y above <paramref name="origin"/>
-    /// up to <paramref name="maxCheck"/>, minus a cosmetic headroom pad.
-    /// Returns <paramref name="maxCheck"/> when nothing is hit.
+    /// Returns the height of the lowest collision surface above
+    /// <paramref name="origin"/> up to <paramref name="maxCheck"/>, minus a
+    /// headroom pad. Sub-cell precise: a top slab obstructs at <c>dy + 0.5</c>,
+    /// not <c>dy</c>. Returns <paramref name="maxCheck"/> when nothing is hit.
     /// </summary>
+    /// <param name="world">The world accessor used for block lookups.</param>
+    /// <param name="origin">Player's current block position (or any base position to scan upward from).</param>
+    /// <param name="maxCheck">Upper bound on the scan distance, in blocks.</param>
     /// <param name="startDy">Lowest dy to begin checking. Clamped to ≥ 1.</param>
     /// <param name="headroomPad">Subtracted from the hit distance.</param>
     public float DistanceToCeilingAt(
@@ -154,8 +168,11 @@ internal sealed class WorldProbe
         for (int dy = startDy; dy <= steps; dy++)
         {
             scratchPos.Set(origin.X, origin.Y + dy, origin.Z);
-            if (IsSolidBlock(world, scratchPos))
-                return Math.Max(0f, dy - headroomPad);
+            float minY1 = LowestCollisionY(world, scratchPos);
+            if (minY1 >= 0f)
+                // First box-bearing cell holds the lowest obstruction; its
+                // bottom face sits at dy + Y1 above the origin.
+                return CeilingProbeMath.ClearanceToObstruction(dy, minY1, headroomPad);
         }
         return maxCheck;
     }
@@ -261,9 +278,32 @@ internal sealed class WorldProbe
         return code != null && Blacklist.Contains(code);
     }
 
-    private static bool IsSolidBlock(IWorldAccessor world, BlockPos pos)
+    /// <summary>Sentinel returned when a cell has no collision boxes.</summary>
+    private const float NoCollision = -1f;
+    /// <summary>
+    /// Lowest collision-box bottom face (<c>Y1</c>, cell-relative, 0..1+) at
+    /// <paramref name="pos"/>, or <see cref="NoCollision"/> if the cell has none.
+    /// </summary>
+    /// <remarks>
+    /// Uses <c>Block.GetCollisionBoxes(blockAccessor, pos)</c> — the same
+    /// placed-state call VS's player collision uses — not the static
+    /// <c>Block.CollisionBoxes</c> property, so a top slab reports ~0.5 while a
+    /// bottom slab / full block reports 0. That sub-cell value is what stops the
+    /// ceiling guard snapping to the cell floor and falsely blocking a climb
+    /// under a raised partial block. Per-box null guard mirrors VS's own loop.
+    /// </remarks>
+    private static float LowestCollisionY(IWorldAccessor world, BlockPos pos)
     {
         var block = world.BlockAccessor.GetBlock(pos);
-        return block?.CollisionBoxes != null && block.CollisionBoxes.Length > 0;
+        var boxes = block?.GetCollisionBoxes(world.BlockAccessor, pos);
+        if (boxes == null || boxes.Length == 0) return NoCollision;
+
+        float minY1 = float.MaxValue;
+        for (int i = 0; i < boxes.Length; i++)
+        {
+            var box = boxes[i];
+            if (box != null && box.Y1 < minY1) minY1 = box.Y1;
+        }
+        return minY1 == float.MaxValue ? NoCollision : minY1;
     }
 }

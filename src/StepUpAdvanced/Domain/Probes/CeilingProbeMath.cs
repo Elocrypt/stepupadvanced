@@ -100,6 +100,27 @@ internal static class CeilingProbeMath
     }
 
     /// <summary>
+    /// Converts a ceiling-probe hit into a clearance distance. The lowest
+    /// collision box in the hit cell has its bottom face at
+    /// <c>dy + minBoxY1</c> above the scan origin; usable clearance is that
+    /// height minus a headroom pad, floored at zero.
+    /// </summary>
+    /// <param name="dy">Whole-block offset of the hit cell above the origin (>= 1).</param>
+    /// <param name="minBoxY1">
+    ///   Cell-relative bottom face (Y1, 0..1+) of the lowest collision box in
+    ///   the hit cell. A full block or bottom slab is 0; a top slab is ~0.5.
+    ///   The reduction over a cell's box array happens at the world-query
+    ///   boundary (Cuboidf is a VS type and cannot cross into the Domain
+    ///   layer); this method takes the already-reduced minimum.
+    /// </param>
+    /// <param name="headroomPad">Cosmetic pad subtracted from the clearance.</param>
+    public static float ClearanceToObstruction(int dy, float minBoxY1, float headroomPad)
+    {
+        float obstruction = dy + minBoxY1;
+        return Math.Max(0f, obstruction - headroomPad);
+    }
+
+    /// <summary>
     /// Builds the offsets for the forward-column fan-out:
     /// span=0 → 1 column (center), span=1 → 3 columns (center + ±1
     /// perpendicular), span=2 → 5 columns (center + ±1 + ±2). Offsets are
