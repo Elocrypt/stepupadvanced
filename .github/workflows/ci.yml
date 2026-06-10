@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build & Test
     runs-on: windows-latest
+    env:
+      VINTAGE_STORY: ${{ secrets.VINTAGE_STORY_PATH }}
 
     steps:
       - name: Checkout
@@ -32,4 +34,12 @@ jobs:
       #   run: dotnet build src/StepUpAdvanced/StepUpAdvanced.csproj -c Release --nologo
 
       - name: Build & run tests
+        if: ${{ env.VINTAGE_STORY != '' }}
+        env:
+          VINTAGE_STORY: ${{ env.VINTAGE_STORY }}
         run: dotnet test tests/StepUpAdvanced.Tests/StepUpAdvanced.Tests.csproj -c Release --nologo --logger "console;verbosity=normal"
+
+      - name: Skip (Vintage Story DLL path not configured)
+        if: ${{ env.VINTAGE_STORY == '' }}
+        run: |
+          echo "::warning::Skipping Build & Test because VINTAGE_STORY_PATH is not configured. The project references non-redistributable Vintage Story DLLs."

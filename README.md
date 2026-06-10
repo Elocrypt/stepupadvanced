@@ -148,7 +148,7 @@ Close Vintage Story before building — a running client locks the PDBs.
 ./build/package.ps1 -Configuration Release -Version <version>
 ```
 
-Produces a mod-portal-ready zip. CI builds and tests on every push; tagged `v*.*.*` pushes publish a release automatically.
+Produces a mod-portal-ready zip. CI builds and tests when `VINTAGE_STORY_PATH` is configured on the runner; tagged `v*.*.*` pushes publish a release automatically.
 
 ### Architecture
 
