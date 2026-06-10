@@ -9,10 +9,7 @@ namespace StepUpAdvanced.Core;
 /// handlers. Wraps each result body in the standard <see cref="ChatFormatting.Tag"/>
 /// so command output looks consistent with everything else the mod prints.
 /// </summary>
-/// <remarks>
-/// Aliased as <c>SuaCmd</c> at call sites via a <c>using</c> directive in
-/// <c>StepUpAdvancedModSystem</c>; existing call sites compile unchanged.
-/// </remarks>
+
 internal static class CommandResults
 {
     public static TextCommandResult Ok(string headline, string? detail = null)

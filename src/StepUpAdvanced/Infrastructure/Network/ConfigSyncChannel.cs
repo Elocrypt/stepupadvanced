@@ -12,22 +12,11 @@ namespace StepUpAdvanced.Infrastructure.Network;
 /// command.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The channel name is a wire-protocol identifier; it must remain
-/// <c>"stepupadvanced"</c> across versions, because <c>modinfo.json</c>
-/// version-gates the client/server pairing rather than the channel
-/// itself doing so. (The same literal is also the mod ID and the
-/// Harmony patch ID — they share the spelling but play different roles.)
-/// </para>
-/// <para>
-/// The wire DTO is <see cref="ConfigSyncPacket"/> — a narrow type
-/// independent of <see cref="StepUpOptions"/> (which remains the on-disk
-/// persistence shape). <see cref="ConfigSyncPacketMapper"/> bridges the
-/// two: <c>ToPacket</c> on send, <c>Apply</c> on receive. Persistence and
-/// wire contracts evolve independently, so client-only fields on
-/// <see cref="StepUpOptions"/> (StepHeight, StepSpeed, increments, probe
-/// tunables, QuietMode) are never broadcast.
-/// </para>
+/// The channel name is a wire-protocol identifier and must remain
+/// <c>"stepupadvanced"</c> across versions.
+/// <see cref="ConfigSyncPacket"/> is the wire DTO — a narrow type separate
+/// from <see cref="StepUpOptions"/>, so client-only fields (StepHeight,
+/// StepSpeed, increments, probe tunables, QuietMode) are never broadcast.
 /// </remarks>
 internal sealed class ConfigSyncChannel
 {
@@ -86,14 +75,7 @@ internal sealed class ConfigSyncChannel
     /// config-file watcher and the <c>/sua reload</c> command after the
     /// server-side config has been reloaded from disk.
     /// </summary>
-    /// <remarks>
-    /// Loops one player at a time to match the historical behavior; if
-    /// any single send fails, others still proceed. The cached
-    /// <see cref="serverChannel"/> avoids the per-call name lookup that
-    /// the previous inline <c>GetChannel("stepupadvanced")</c> sites
-    /// performed. The packet is built once and reused across all
-    /// recipients.
-    /// </remarks>
+
     public void BroadcastToAll()
     {
         if (sapi == null || serverChannel == null) return;
@@ -105,17 +87,13 @@ internal sealed class ConfigSyncChannel
     }
 
     /// <summary>
-    /// Pushes the current options to a single joining player. As of
-    /// Phase 3a this fires unconditionally — previously it only fired
-    /// when enforcement was active, which silently dropped clients
-    /// across "enforcement turned off" transitions and any other
-    /// fields the server might want the client to see.
+    /// Pushes the current options to a single joining player.
+    /// Fires unconditionally so clients always receive the current
+    /// enforcement state, not just when enforcement is active.
     /// </summary>
     private void OnPlayerJoin(IServerPlayer player)
     {
-        // Defensive — registration captured a valid sapi/serverChannel,
-        // so a null here would mean a registration-order bug rather
-        // than a runtime condition.
+        // Both are non-null after registration; null here indicates a registration-order bug.
         if (sapi == null || serverChannel == null) return;
 
         if (StepUpOptions.Current == null)

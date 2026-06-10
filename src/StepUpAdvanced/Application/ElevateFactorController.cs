@@ -18,28 +18,15 @@ namespace StepUpAdvanced.Application;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Phase 7a extracts this from <c>StepUpAdvancedModSystem</c>. Behavior
-/// is preserved — the same enforcement gate, the same clamp shape, the
-/// same toast suppression pattern. The pure compute is on the static
-/// <see cref="ComputeDesiredElevateFactor"/> for test isolation; the
-/// instance methods wrap the side effects (player/physics lookup,
-/// toast emission, config persistence, writer dispatch).
+/// <b>Push-driven, not tick-driven.</b> The elevate factor changes
+/// infrequently and is pushed on events that change it: user actions,
+/// toggle, server config receive, and config reload. The writer's
+/// idempotency check prevents redundant reflected writes.
 /// </para>
 /// <para>
-/// <b>Push-driven, not tick-driven.</b> Unlike step height, which gets
-/// re-applied every 50 ms via a tick listener, the elevate factor
-/// changes infrequently and is pushed on the events that change it:
-/// user actions (<see cref="Increase"/> / <see cref="Decrease"/>),
-/// stepup toggle, server config receive, and config reload. The writer's
-/// per-field idempotency cache (with <c>1e-6</c> threshold) prevents
-/// redundant reflected writes when the value hasn't actually moved.
-/// </para>
-/// <para>
-/// <b>stepUpEnabled as a method parameter</b> rather than internal state:
-/// the controller doesn't own the toggle, the step-height controller will
-/// (Step 3 of Phase 7a). Passing it per call avoids mirroring state
-/// across two controllers and avoids a back-reference to the height
-/// controller during Step 2.
+/// <b><c>stepUpEnabled</c> is a method parameter</b> rather than internal
+/// state — the toggle is owned by <see cref="StepHeightController"/>, and
+/// taking it per call avoids mirroring state across two controllers.
 /// </para>
 /// </remarks>
 internal sealed class ElevateFactorController
@@ -48,9 +35,6 @@ internal sealed class ElevateFactorController
     private readonly PhysicsFieldWriter writer;
     private readonly MessageDebouncer toasts;
 
-    // Closure over ModSystem.QueueConfigSave (the 200 ms debounced write
-    // path with idempotency gate). Phase 7b is expected to eliminate the
-    // static queue state on ModSystem; this delegate is the interim glue.
     private readonly Action persistConfig;
 
     /// <summary>
@@ -148,24 +132,11 @@ internal sealed class ElevateFactorController
     }
 
     /// <summary>
-    /// Pure compute for the desired elevate-factor write value. Pinned by
-    /// <c>ElevateFactorControllerTests</c>. The priority order is:
+    /// Pure compute for the desired elevate-factor write value. Priority:
+    /// if step-up is disabled, return <c>defaultSpeed × 0.05</c>; otherwise
+    /// clamp the logical speed (enforced uses the server value, otherwise
+    /// the runtime value) and multiply by 0.05 (VS's per-tick convention).
     /// </summary>
-    /// <remarks>
-    /// <list type="number">
-    /// <item><description>If <paramref name="stepUpEnabled"/> is <c>false</c>,
-    /// return <c><paramref name="defaultSpeed"/> × 0.05</c> regardless of
-    /// every other input — disabling stepup resets the player's speed
-    /// modifier to the configured default.</description></item>
-    /// <item><description>Otherwise, pick the logical speed: when enforced,
-    /// the server-authoritative <paramref name="optionsStepSpeed"/>; when
-    /// not, the user's runtime <paramref name="currentElevateFactor"/>.</description></item>
-    /// <item><description>Clamp through <see cref="ElevateFactorMath.Clamp"/> —
-    /// client floor always; server min/max only when enforced.</description></item>
-    /// <item><description>Multiply by <c>0.05</c> (the VS physics
-    /// convention for converting a per-second factor to per-tick).</description></item>
-    /// </list>
-    /// </remarks>
     internal static double ComputeDesiredElevateFactor(
         bool stepUpEnabled,
         bool isEnforced,
@@ -183,8 +154,7 @@ internal sealed class ElevateFactorController
     /// <summary>
     /// Hotkey body for the "increase speed" action (Up arrow by default).
     /// Returns <c>true</c> if the press was consumed (toast emitted or value
-    /// changed), <c>false</c> otherwise. Behavior mirrors the pre-Phase-7a
-    /// <c>OnIncreaseElevateFactor</c> on the ModSystem.
+    /// changed), <c>false</c> otherwise. 
     /// </summary>
     public bool Increase(bool stepUpEnabled)
     {
@@ -220,9 +190,8 @@ internal sealed class ElevateFactorController
 
     /// <summary>
     /// Hotkey body for the "decrease speed" action (Down arrow by default).
-    /// Suppresses the redundant generic "Speed » X" toast on the press that
-    /// lands at the client floor — see the <c>atFloor</c> pattern from the
-    /// Phase 4 polish (CHANGELOG entry on redundant double-toasts).
+    /// Suppresses the redundant generic "Speed » X" toast when the press
+    /// lands at the client floor — avoids two toasts on the same keypress.
     /// </summary>
     public bool Decrease(bool stepUpEnabled)
     {
@@ -248,10 +217,8 @@ internal sealed class ElevateFactorController
 
         if (currentElevateFactor < previous)
         {
-            // True when this descent lands us at (or below) the client
-            // hard floor. Drives both the at-min toast and the suppression
-            // of the redundant generic "Speed » 0.7" update on the same
-            // press — see CHANGELOG "Phase 4 polish".
+            // True when this descent lands at (or below) the client hard floor.
+            // Drives the at-min toast and suppresses the redundant "Speed » 0.7" update.
             bool atFloor = currentElevateFactor <= ElevateFactorMath.ClientMin;
             if (atFloor && toasts.SpeedAtMin.TryShow())
             {

@@ -16,18 +16,7 @@ namespace StepUpAdvanced.Configuration;
 /// <summary>
 /// Static facade for loading, saving, and migrating <see cref="StepUpOptions"/>.
 /// </summary>
-/// <remarks>
-/// <para>
-/// All imperative concerns that used to live on <c>StepUpAdvancedConfig</c>
-/// (load/save/migrate/normalize/validate) live here. <see cref="StepUpOptions"/>
-/// itself is now a pure data class.
-/// </para>
-/// <para>
-/// Phase 2b will pull <see cref="MergeAndMigrate"/> out into the
-/// <c>Configuration/Migrations/</c> folder with one file per schema version.
-/// For now, the existing single-method form is preserved.
-/// </para>
-/// </remarks>
+
 internal static class ConfigStore
 {
     /// <summary>
@@ -53,23 +42,12 @@ internal static class ConfigStore
     /// </summary>
     private static readonly object _saveLock = new();
 
-    // Client-side floor values live on the Domain classes:
-    //   StepHeightClamp.ClientMin (was StepHeightClamp.ClientMin here)
-    //   ElevateFactorMath.ClientMin (was ElevateFactorMath.ClientMin here)
-    // Server-cap bounds stay here as ConfigStore-private because they're
-    // a server-validation concern (not a client clamp); a future phase
-    // may move them to a server-validation Domain class.
 
     /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
     private const float ServerCapMinHeight = 0.6f;
 
-    /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
     private const float ServerCapMaxHeight = 20f;
-
-    /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
     private const float ServerCapMinSpeed = 0.7f;
-
-    /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
     private const float ServerCapMaxSpeed = 20f;
 
     /// <summary>
@@ -176,12 +154,8 @@ internal static class ConfigStore
         if (stepSpeed != StepUpOptions.Current.StepSpeed) StepUpOptions.Current.StepSpeed = stepSpeed;
         ModLog.Verbose(api, $"Config Loaded: StepSpeed = {StepUpOptions.Current.StepSpeed}");
 
-        // Note: <c>ServerEnforceSettings</c> is honored verbatim from disk in
-        // every context, including single-player. The player IS the server
-        // admin in SP and may legitimately opt in to enforcing caps and the
-        // server blacklist on themselves. Earlier hotfix code clobbered the
-        // flag to <c>false</c> here on every load — that was silent data
-        // loss and is gone.
+        // ServerEnforceSettings is honored verbatim — single-player players
+        // are also the server admin and may opt in to enforcing caps on themselves.
 
         int fwdOld = StepUpOptions.Current.ForwardProbeDistance;
         StepUpOptions.Current.ForwardProbeDistance = GameMath.Clamp(StepUpOptions.Current.ForwardProbeDistance, 0, 4);
@@ -255,8 +229,7 @@ internal static class ConfigStore
         // Defensive null-guard for the BlockBlacklist collection. The default
         // constructor initializes a fresh list and MergeAndMigrate preserves
         // non-null lists from disk, so this is normally a no-op — but kept
-        // here as a safety net (was previously in Migrate before Phase 2b
-        // separated migrations from invariant enforcement).
+        // defensive null-guard kept as a safety net.
         if (cfg.BlockBlacklist == null)
         {
             cfg.BlockBlacklist = new List<string>();
@@ -293,40 +266,15 @@ internal static class ConfigStore
     /// safe via global mutex + in-process lock + retry-with-backoff.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// <b>Client-side blacklist isolation:</b> when called with an
-    /// <see cref="ICoreClientAPI"/> AND <c>!IsSinglePlayer</c>, the
-    /// server-managed <c>BlockBlacklist</c> is temporarily swapped out
-    /// for an empty list before writing, then restored in a
-    /// <c>finally</c> block. The client never legitimately owns server
-    /// blacklist data on a remote server — pre-3b the wholesale-replace
-    /// receive path would deposit the remote server's list into
-    /// <c>StepUpOptions.Current</c>, and any subsequent hotkey-triggered
-    /// save would persist it into the player's local server-side config
-    /// file. That polluted file would then haunt single-player sessions
-    /// until manually cleaned. The swap closes that hole at the
-    /// persistence layer; the Phase 3b runtime gate in
-    /// <c>IsNearBlacklistedBlock</c> handles the in-memory side.
-    /// Existing polluted files self-heal on the next remote-MP client
-    /// save.
-    /// </para>
-    /// <para>
-    /// In single-player the swap is bypassed: the player IS the server
-    /// admin and legitimately owns the local <c>StepUpAdvancedConfig.json</c>,
-    /// including its <c>BlockBlacklist</c>. <c>/sua add</c> in single-player
-    /// persists through the server save path; <c>.sua add</c> writes to the
-    /// separate <c>StepUpAdvanced_BlockBlacklist.json</c>. Both work.
-    /// </para>
+    /// On a remote-MP client, the server-managed <c>BlockBlacklist</c> is
+    /// temporarily swapped out for an empty list before writing so the server's
+    /// pushed blacklist never pollutes the player's local config file. The swap
+    /// is bypassed in single-player, where the player owns the full config.
     /// </remarks>
     public static void Save(ICoreAPI api)
     {
-        // Guarded blacklist swap — see remarks above.
-        // Gated on !IsSinglePlayer: in single-player the player IS the
-        // server admin and legitimately owns the blacklist, so we let
-        // the full Current (including BlockBlacklist) persist through
-        // the client save path. In remote multiplayer the swap fires
-        // and prevents the server's pushed list from polluting the
-        // client's local server-side config file.
+        // Remote-MP client: swap out the server blacklist before saving so it
+        // never pollutes the player's local config. Skipped in single-player.
         bool isClientSide = api is ICoreClientAPI;
         bool isRemoteMultiplayerClient = isClientSide && !((ICoreClientAPI)api).IsSinglePlayer;
         List<string>? savedBlacklist = null;
@@ -371,10 +319,7 @@ internal static class ConfigStore
         }
         finally
         {
-            // Restore the in-memory blacklist regardless of save outcome,
-            // so a save failure or exception doesn't leave the client's
-            // runtime view of the server list empty. Only restores when
-            // a swap actually happened (remote-MP client save).
+            // Restore even on failure so a bad save doesn't blank the runtime blacklist.
             if (isRemoteMultiplayerClient && savedBlacklist != null)
             {
                 StepUpOptions.Current.BlockBlacklist = savedBlacklist;
@@ -383,10 +328,9 @@ internal static class ConfigStore
     }
 
     /// <summary>
-    /// Internal predicate: should server caps be enforced during load-time
-    /// clamping? After Phase 3b's hotfix-of-the-hotfix, this is just the
-    /// flag — single-player is no longer a forced-off case. The player IS
-    /// the server admin in SP and may opt in to enforcing caps on themselves.
+    /// True when server enforcement should apply during load-time clamping.
+    /// Single-player players are also the server admin and may opt in to
+    /// enforcing caps on themselves, so the flag is honored verbatim.
     /// </summary>
     private static bool IsEnforcedForThisSide()
     {

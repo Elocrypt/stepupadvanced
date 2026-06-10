@@ -24,21 +24,9 @@ namespace StepUpAdvanced.Application;
 /// ~2/sec regardless of how often <see cref="RequestSave"/> is called.</description></item>
 /// </list>
 /// <para>
-/// Phase 7b Step 5 extracts this from the static
-/// <c>ConfigQueueLock</c>/<c>saveQueued</c>/<c>lastSaveTime</c>/<c>MinSaveInterval</c>
-/// state that previously lived on <see cref="StepUpAdvancedModSystem"/>.
-/// Static per-mod state didn't compose well with VS's per-instance
-/// ModSystem lifecycle — an instance owned by ModSystem and exposed to
-/// the controllers as a method reference is cleaner.
-/// </para>
-/// <para>
-/// <b>Edge case preserved verbatim:</b> if the user makes one last
-/// change and exits within 500 ms of the previous save, the change
-/// lives only in memory and is never persisted — the next callback
-/// fires after exit, never enters the &gt;500 ms branch. This was the
-/// pre-Step-5 behavior; if it becomes a real problem, the fix is a
-/// trailing-edge save in <see cref="StepUpAdvancedModSystem.Dispose"/>,
-/// scheduled in the Phase 9 roadmap.
+/// <b>Edge case:</b> if the user makes a change and exits within 500 ms of
+/// the last save, that change lives only in memory and is never persisted.
+/// If this becomes a problem, a trailing-edge save in Dispose would close it.
 /// </para>
 /// </remarks>
 internal sealed class ConfigSaveQueue

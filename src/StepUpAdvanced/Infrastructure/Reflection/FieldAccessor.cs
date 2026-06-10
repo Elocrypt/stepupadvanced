@@ -12,26 +12,11 @@ namespace StepUpAdvanced.Infrastructure.Reflection;
 /// ~16 bytes per call on .NET).
 /// </summary>
 /// <remarks>
-/// <para>
-/// At 20 Hz with both step-height and elevate-factor writes, the boxing
-/// cost is small but constant; <see cref="FieldAccessor{TTarget, TValue}"/>
-/// eliminates it for the hot path. The delegate is built once on the
-/// first construction and reused indefinitely.
-/// </para>
-/// <para>
-/// The accessor resolves the field at construction by walking a list of
-/// candidate names (the VS API has historically used both <c>StepHeight</c>
-/// and <c>stepHeight</c> across versions); first match wins. If none are
-/// found, <see cref="IsAvailable"/> stays <c>false</c> and
-/// <see cref="TrySet"/> is a no-op returning <c>false</c> — callers can
-/// fall back to a one-time user-facing warning.
-/// </para>
-/// <para>
-/// Both a setter and a getter delegate are compiled at construction from the
-/// same resolved field. The getter exists for read-back verification on the
-/// hot path (see <see cref="TryGet"/>); both are no-ops returning
-/// <c>false</c> when the field can't be resolved.
-/// </para>
+/// The accessor resolves the field at construction by walking candidate names
+/// (the VS API has used both <c>StepHeight</c> and <c>stepHeight</c> across
+/// versions); first match wins. If none are found, <see cref="IsAvailable"/>
+/// stays <c>false</c> and both <see cref="TrySet"/> / <see cref="TryGet"/>
+/// are no-ops returning <c>false</c>.
 /// </remarks>
 internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
 {
@@ -85,12 +70,9 @@ internal sealed class FieldAccessor<TTarget, TValue> where TTarget : class
     /// <see cref="FieldInfo.GetValue(object)"/>.
     /// </summary>
     /// <remarks>
-    /// Added in Phase 8 for read-back verification in
-    /// <c>PhysicsFieldWriter.WriteStepHeight</c>: comparing the desired value
-    /// against the LIVE field (rather than a cached last-written value) so an
-    /// external reset of the physics behavior — respawn, dimension change, or
-    /// another mod re-initializing it — can't leave a stale cache thinking the
-    /// field is already correct.
+    /// Used for read-back verification: comparing the desired value against the
+    /// LIVE field means an external reset of the physics behavior can't leave a
+    /// stale cache suppressing the next write.
     /// </remarks>
     public bool TryGet(TTarget target, out TValue value)
     {

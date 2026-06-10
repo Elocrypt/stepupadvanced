@@ -10,36 +10,11 @@ namespace StepUpAdvanced.Infrastructure.Network;
 /// blacklist, probe tunables, <c>QuietMode</c>, etc.) stays local.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <b>Why a separate type:</b> through Phase 3a the wire DTO was
-/// <c>StepUpOptions</c>, which doubled as the on-disk persistence shape.
-/// That coupling meant every server broadcast force-overwrote every
-/// client-only field; introducing a new client-only setting (such as
-/// <c>QuietMode</c> at <c>ProtoMember(27)</c>) silently broke as soon
-/// as the server pushed an update. Decoupling persistence from wire
-/// shape closes that hole and makes the client's enforcement contract
-/// explicit at the type level.
-/// </para>
-/// <para>
 /// <b>ProtoMember numbering:</b> independent of <c>StepUpOptions</c>.
-/// The two contracts evolve separately. Within this packet, never reuse
-/// numbers — adding a field gets the next free number. Removing a field
-/// requires a coordinated client/server release; modinfo version-gating
-/// is the only mechanism enforcing client/server pairing for this mod.
-/// </para>
-/// <para>
-/// <b>Wire compatibility:</b> the Phase 3b release breaks the wire format
-/// vs prior versions (server/client of mismatched major versions cannot
-/// decode each other's packets). This is acceptable because
-/// <c>modinfo.json</c> already enforces matching versions.
-/// </para>
-/// <para>
-/// <b>Record class:</b> declared as <c>record class</c> for
-/// auto-generated value equality, which gives test assertions clean
-/// roundtrip checks (<c>actual.Should().Be(expected)</c>). Properties
-/// remain mutable (<c>get; set;</c>) so protobuf-net's reflective
-/// deserializer can write into them.
-/// </para>
+/// Never reuse numbers — adding a field gets the next free number.
+/// Declared as <c>record class</c> for value equality, which gives test
+/// assertions clean round-trip checks. Properties stay mutable so
+/// protobuf-net's reflective deserializer can write into them.
 /// </remarks>
 [ProtoContract]
 internal sealed record class ConfigSyncPacket
@@ -81,14 +56,8 @@ internal sealed record class ConfigSyncPacket
     [ProtoMember(9)] public bool ShowServerEnforcedNotice { get; set; }
 
     /// <summary>
-    /// Server-managed list of block codes that suppress step-up when
-    /// the player is adjacent to one. The client merges this with its
-    /// own <c>BlockBlacklistOptions.BlockCodes</c> at probe time
-    /// (see <c>IsNearBlacklistedBlock</c>); both lists must be present
-    /// for the merged check to behave correctly. Pre-3b this was
-    /// piggy-backing on <c>StepUpOptions.BlockBlacklist</c>'s wholesale
-    /// replace; the explicit field here makes the dependency visible
-    /// at the wire-contract level.
+    /// Server-managed blacklist pushed to the client on join. Merged with
+    /// <c>BlockBlacklistOptions.BlockCodes</c> at probe time.
     /// </summary>
     [ProtoMember(10)] public List<string>? BlockBlacklist { get; set; }
 }

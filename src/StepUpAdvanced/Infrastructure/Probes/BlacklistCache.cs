@@ -9,23 +9,8 @@ namespace StepUpAdvanced.Infrastructure.Probes;
 /// <see cref="MarkDirty"/>.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Pre-Phase-6, the per-tick blacklist probe did
-/// <c>serverList.Contains(code) || clientList.Contains(code)</c> directly
-/// on the underlying <see cref="List{T}"/>s — O(n) per lookup, plus a
-/// per-tick allocation of the "effective server list" wrapper. With the
-/// blacklist typically holding fewer than ten entries the asymptotic
-/// difference is moot, but the rebuilt-on-change HashSet eliminates the
-/// allocations that the wrapper approach forced (empty-list fallbacks,
-/// chained <c>.EastCopy().NorthCopy()</c> calls in the probe ring, etc.)
-/// and gives a single allocation-free <see cref="Contains"/> primitive
-/// for the probe loop to call.
-/// </para>
-/// <para>
-/// The cache is <i>conservatively</i> initialized to <c>dirty = true</c>
-/// so the first probe call after construction always rebuilds — the
-/// caller never has to remember to mark dirty after instantiation.
-/// </para>
+/// The cache is initialized dirty so the first probe call always rebuilds —
+/// the caller never has to mark dirty after instantiation.
 /// </remarks>
 internal sealed class BlacklistCache
 {

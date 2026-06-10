@@ -8,34 +8,14 @@ namespace StepUpAdvanced.Infrastructure.Network;
 /// shape and the narrow <see cref="ConfigSyncPacket"/> wire shape.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <see cref="ToPacket"/> runs server-side just before broadcast — it
-/// produces the wire DTO from the authoritative server config.
-/// </para>
-/// <para>
-/// <see cref="Apply"/> runs client-side after receive — it merges the
-/// ten wire fields into the client's existing <see cref="StepUpOptions"/>
-/// instance, leaving every other field untouched. This is the central
-/// invariant the type split enforces: client-local fields like
-/// <c>StepHeight</c>, <c>StepSpeed</c>, <c>QuietMode</c>, and the probe
-/// tunables survive a server push, where previously the wholesale
-/// <c>ConfigStore.UpdateConfig(config)</c> replace clobbered them all.
-/// </para>
-/// <para>
-/// The mapper is intentionally a static class with no fields and no
-/// dependencies on VS APIs — it is fully unit-testable. Single-player
-/// and integrated-server-host overrides (forcing
-/// <c>ServerEnforceSettings = false</c>) live at the call site, not in
-/// the mapper, because that override depends on the runtime side context
-/// the mapper does not know about.
-/// </para>
+/// <see cref="ToPacket"/> runs server-side; <see cref="Apply"/> runs
+/// client-side and merges only the enforcement fields, leaving every
+/// client-local field (StepHeight, StepSpeed, QuietMode, probe tunables)
+/// untouched. Static with no VS API dependencies — fully unit-testable.
 /// </remarks>
 internal static class ConfigSyncPacketMapper
 {
-    /// <summary>
-    /// Builds a wire packet from the current options. Pure function:
-    /// does not mutate <paramref name="options"/>.
-    /// </summary>
+    /// <summary>Builds a wire packet from the current options. Does not mutate <paramref name="options"/>.</summary>
     public static ConfigSyncPacket ToPacket(StepUpOptions options) => new()
     {
         ServerEnforceSettings = options.ServerEnforceSettings,
@@ -51,24 +31,13 @@ internal static class ConfigSyncPacketMapper
     };
 
     /// <summary>
-    /// Applies the wire packet's ten enforcement fields to
-    /// <paramref name="current"/>, leaving all other fields unchanged.
-    /// Replaces the previous wholesale <c>ConfigStore.UpdateConfig</c>
-    /// call in the client receive handler.
+    /// Applies the wire packet's enforcement fields to <paramref name="current"/>,
+    /// leaving all client-local fields unchanged.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Does not mutate <paramref name="packet"/>. Idempotent: applying
-    /// the same packet twice produces the same end state.
-    /// </para>
-    /// <para>
-    /// A null <see cref="ConfigSyncPacket.BlockBlacklist"/> on the wire
-    /// collapses to a fresh empty list on <paramref name="current"/> —
-    /// never to <c>null</c> — because downstream readers
-    /// (<c>IsNearBlacklistedBlock</c>, <c>/sua list</c>) treat the field
-    /// as a non-null collection and a null would force a defensive
-    /// branch at every read site.
-    /// </para>
+    /// Idempotent. A null <see cref="ConfigSyncPacket.BlockBlacklist"/> on
+    /// the wire collapses to an empty list — never <c>null</c> — so downstream
+    /// readers don't need to null-check the field.
     /// </remarks>
     public static void Apply(StepUpOptions current, ConfigSyncPacket packet)
     {

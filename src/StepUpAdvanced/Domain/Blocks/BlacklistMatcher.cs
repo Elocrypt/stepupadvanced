@@ -8,21 +8,7 @@ namespace StepUpAdvanced.Domain.Blocks;
 /// pass either the current <see cref="List{T}"/>-backed lists or a
 /// future <see cref="HashSet{T}"/> without an API change.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Phase 5 preserves the current strict-equality semantics (the per-tick
-/// probe in <c>IsNearBlacklistedBlock</c> previously did
-/// <c>list.Contains(code)</c> directly). Phase 6 swaps the call site's
-/// backing collection to a cached HashSet that rebuilds on
-/// blacklist-change events — the matcher's public surface is unchanged.
-/// </para>
-/// <para>
-/// Wildcard / prefix / glob support is explicitly out of scope here. If
-/// a future phase wants it, this is the right shelf to add it on (the
-/// <see cref="Matches"/> signature already takes a pattern collection,
-/// not just a single string).
-/// </para>
-/// </remarks>
+
 internal static class BlacklistMatcher
 {
     /// <summary>

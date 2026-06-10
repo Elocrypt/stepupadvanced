@@ -8,18 +8,8 @@ namespace StepUpAdvanced.Infrastructure.Input;
 /// flag re-arms it for the next time the condition transitions back on.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Pre-Phase-4 the suppression state lived in six shared <c>hasShown*</c>
-/// fields on <c>StepUpAdvancedModSystem</c>. Sharing flags across
-/// distinct toasts produced the "I just saw 'max-height', so 'max-speed'
-/// is silently swallowed" class of bugs. The split into nine named
-/// flags (one per distinct toast) ends that.
-/// </para>
-/// <para>
-/// Typed handles are deliberately preferred over an enum-keyed lookup —
-/// the set of toasts is fixed at compile time, IDE discovery is better,
-/// and there's no chance of typo'd string keys at call sites.
-/// </para>
+/// Typed handles are preferred over an enum-keyed lookup — the set of
+/// toasts is fixed at compile time and there's no chance of typo'd keys.
 /// </remarks>
 internal sealed class MessageDebouncer
 {
@@ -35,16 +25,10 @@ internal sealed class MessageDebouncer
     /// <summary>"min-speed" toast at the speed floor (server cap or client hard floor).</summary>
     public OnceFlag SpeedAtMin { get; } = new();
 
-    /// <summary>
-    /// "server-enforced – height-change-blocked" toast. Direction-agnostic:
-    /// covers both increase-blocked and decrease-blocked (the toast text
-    /// doesn't distinguish, so a single flag is correct here — the
-    /// pre-Phase-4 split into <c>MaxE</c>/<c>MinE</c> was an artifact of
-    /// the implementation, not a UX choice).
-    /// </summary>
+    /// <summary>"server-enforced – height-change-blocked" toast. Direction-agnostic; a single flag covers both directions.</summary>
     public OnceFlag HeightEnforced { get; } = new();
 
-    /// <summary>"server-enforced – speed-change-blocked" toast. Direction-agnostic; see <see cref="HeightEnforced"/>.</summary>
+    /// <summary>"server-enforced – speed-change-blocked" toast. Direction-agnostic.</summary>
     public OnceFlag SpeedEnforced { get; } = new();
 
     /// <summary>"speed-only-mode – height-controls-disabled" toast (XSkills-compatibility mode).</summary>
@@ -53,13 +37,7 @@ internal sealed class MessageDebouncer
     /// <summary>"server-enforced – reload-blocked" toast — fired by <c>OnReloadConfig</c> when the server forbids client-side reload.</summary>
     public OnceFlag ReloadBlocked { get; } = new();
 
-    /// <summary>
-    /// "server-enforcement on/off" notice fired from the receive handler
-    /// on enforcement-flag transitions. The receive site reads
-    /// <see cref="OnceFlag.IsShown"/> directly to decide between the
-    /// "off" and "on" branches; <see cref="OnceFlag.Reset"/> arms the
-    /// "on" toast and <see cref="OnceFlag.TryShow"/> emits and marks it.
-    /// </summary>
+    /// <summary>Fired on server-enforcement transitions (on/off).</summary>
     public OnceFlag ServerEnforcement { get; } = new();
 }
 

@@ -15,33 +15,20 @@ namespace StepUpAdvanced.Application;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Phase 7b Step 4 extracts this from <c>StepUpAdvancedModSystem</c>.
-/// Behavior is preserved verbatim — same locale keys, same return-value
-/// shapes, same Suppress(150) timeout. The thin command-handler wrappers
-/// on ModSystem still validate <c>TextCommandCallingArgs</c> input (player
-/// caller, current block selection) and then delegate; the coordinator
-/// is free of <see cref="TextCommandCallingArgs"/> so its logic can be
-/// reasoned about without command-framework context.
+/// Command handlers validate input (<c>TextCommandCallingArgs</c>, block
+/// selection) and delegate here; the coordinator is free of command-framework
+/// types so its logic can be tested independently.
 /// </para>
 /// <para>
-/// <b>MarkDirty closure, not WorldProbe reference.</b> The plan's
-/// constructor signature was <c>(sapi, watcher, channel, WorldProbe?)</c>
-/// — but in a normal VS lifecycle, <c>StartServerSide</c> runs before
-/// <c>StartClientSide</c>, so a <c>WorldProbe?</c> field on the
-/// ModSystem is null at the moment the coordinator is constructed.
-/// Passing a value-typed reference freezes that null. Closing over the
-/// field via <see cref="Action"/> resolves it at call-time, matching
-/// the pre-Phase-7b inline pattern (where the handlers also resolved
-/// <c>worldProbe</c> at command-execution time, not registration time).
+/// <b>MarkDirty is a closure, not a WorldProbe reference.</b>
+/// <c>StartServerSide</c> runs before <c>StartClientSide</c> in VS, so the
+/// ModSystem's <c>worldProbe</c> field is null when the coordinator is
+/// constructed. A closure resolves it at call-time instead.
 /// </para>
 /// <para>
-/// <b>Five methods, not four.</b> The plan listed one <c>ReloadConfig</c>;
-/// in practice the existing code has two distinct reload entry points
-/// with different Suppress semantics — <c>/sua reload</c> Suppresses
-/// (we're about to write back), the file-watcher event does not (the
-/// external write that triggered it is already past). Split into
-/// <see cref="ReloadFromCommand"/> and <see cref="ReloadFromWatcher"/>
-/// to preserve that distinction explicitly.
+/// <b>Two reload entry points</b> with different suppress semantics:
+/// <c>/sua reload</c> suppresses the watcher (we're about to write);
+/// the watcher event does not (the triggering write is already past).
 /// </para>
 /// </remarks>
 internal sealed class ServerEnforcementCoordinator
@@ -109,11 +96,8 @@ internal sealed class ServerEnforcementCoordinator
     }
 
     /// <summary>
-    /// Clears the entire server blacklist. Reports an Info result if
-    /// the list was already empty (no Suppress/Save/Broadcast in that
-    /// case — the write would be a no-op anyway). Pointedly does NOT
-    /// touch any client's local blacklist; that list lives in a
-    /// separate config file owned by the client.
+    /// Clears the entire server blacklist. No-ops (with an info result) if
+    /// already empty. Does not touch any client's local blacklist.
     /// </summary>
     public TextCommandResult ClearBlacklist()
     {
@@ -130,14 +114,9 @@ internal sealed class ServerEnforcementCoordinator
     }
 
     /// <summary>
-    /// <c>/sua reload</c> command body. Suppresses the watcher (so the
-    /// LoadOrUpgrade-triggered migration write — if any — doesn't loop
-    /// back through <see cref="ReloadFromWatcher"/>), loads from disk,
-    /// and broadcasts the new state to all connected clients. No
-    /// explicit <see cref="markBlacklistDirty"/>: the local client's
-    /// <c>OnReceiveServerConfig</c> handler invalidates its own probe
-    /// cache when the broadcast arrives, so dirtying here would be
-    /// redundant.
+    /// <c>/sua reload</c> command body. Suppresses the watcher, reloads from
+    /// disk, and broadcasts to all clients. The broadcast's receive handler
+    /// marks the probe cache dirty, so no explicit call is needed here.
     /// </summary>
     public TextCommandResult ReloadFromCommand()
     {

@@ -12,30 +12,13 @@ namespace StepUpAdvanced.Infrastructure.Probes;
 /// (a reusable <see cref="BlockPos"/>, a <see cref="BlockPos"/>[5] for
 /// forward-column fan-out) so per-tick allocations are eliminated. Math
 /// is delegated to the framework-free <see cref="CeilingProbeMath"/>
-/// (Phase 5); this class is the world-query adapter.
+/// This class is the world-query adapter.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Pre-Phase-6 the probe methods lived on <c>StepUpAdvancedModSystem</c>
-/// and allocated freely — every <c>playerPos.EastCopy().NorthCopy()</c>
-/// minted a new <see cref="BlockPos"/>, every <c>BuildForwardColumns</c>
-/// call allocated a fresh array, and the blacklist check ran a
-/// <c>List&lt;string&gt;.Contains</c> per cell. The combined surface was
-/// roughly 25–35 small allocations per 50 ms tick.
-/// </para>
-/// <para>
-/// The static <see cref="RingOffsets"/> table replaces the 8 chained
-/// <c>EastCopy/WestCopy/NorthCopy/SouthCopy</c> calls. <see cref="scratchPos"/>
-/// is reused across all single-cell lookups, including the velocity-aware
-/// lookahead. <see cref="columnScratch"/> holds the (up to 5) forward
-/// columns for the ceiling guard's fan-out.
-/// </para>
-/// <para>
-/// One instance per <c>StepUpAdvancedModSystem</c>. Not thread-safe — the
-/// VS client tick runs on the main thread and the scratch state is
-/// stateful between method calls (but not between ticks; each tick's
-/// probes are sequential).
-/// </para>
+/// <see cref="scratchPos"/> is reused across all per-tick cell lookups;
+/// <see cref="columnScratch"/> holds the forward-column fan-out.
+/// Not thread-safe — VS client ticks run on the main thread and probes
+/// within a tick are sequential.
 /// </remarks>
 internal sealed class WorldProbe
 {
@@ -50,7 +33,7 @@ internal sealed class WorldProbe
     /// Cardinal motion thresholds for the velocity-aware lookahead. At
     /// <c>&gt; 0.05</c> on an axis the probe adds one extra cell two
     /// blocks ahead; at <c>&gt; 0.15</c> a second cell three blocks ahead.
-    /// Tuned (pre-Phase-6) to fire on sprint/fall, not idle drift.
+    /// Tuned to fire on sprint/fall velocity, not idle drift.
     /// </summary>
     private const double VelocityLookaheadThreshold1 = 0.05;
     private const double VelocityLookaheadThreshold2 = 0.15;
@@ -114,7 +97,7 @@ internal sealed class WorldProbe
             if (CellIsBlacklisted(world, scratchPos)) return true;
         }
 
-        // Velocity-aware lookahead. Same thresholds and shape as pre-Phase-6.
+        // Velocity-aware lookahead: probe 2-3 blocks ahead when moving fast.
         double absX = Math.Abs(motion.X);
         if (absX > VelocityLookaheadThreshold1)
         {
@@ -216,12 +199,7 @@ internal sealed class WorldProbe
     /// columns. Caller iterates <c>columns[0..count]</c> via
     /// <see cref="GetColumn"/>.
     /// </summary>
-    /// <remarks>
-    /// Math (forward direction, perpendicular axis, span widths) is
-    /// delegated to <see cref="CeilingProbeMath"/>; this method is the
-    /// adapter that materializes the offset tuples into the scratch
-    /// <see cref="BlockPos"/> buffer.
-    /// </remarks>
+
     public int BuildForwardColumns(BlockPos basePos, double yawRad, int dist, int span)
     {
         var (fx, fz) = CeilingProbeMath.ForwardOffset(yawRad, dist);

@@ -17,28 +17,12 @@ namespace StepUpAdvanced.Application;
 /// controlserver privilege) command trees and every handler body.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Phase 8 Step 8.10 extracts this from <c>StepUpAdvancedModSystem</c>,
-/// which is now a thin composition root: it constructs this registrar and
-/// calls <see cref="RegisterClient"/> (in <c>StartClientSide</c>) or
-/// <see cref="RegisterServer"/> (in <c>StartServerSide</c>). Behavior is
-/// preserved verbatim — a structural move, not a logic change.
-/// </para>
-/// <para>
-/// Client and server run as SEPARATE ModSystem instances, so a given
-/// <see cref="SuaCommands"/> instance services exactly one side: the
-/// matching register method is called and only that side's handlers are
-/// ever registered/invoked. The side-specific dependencies use the same
-/// <c>null!</c> late-init pattern as the ModSystem's API references — VS
-/// guarantees the register method runs before any handler fires, so the
-/// other side's fields are never dereferenced.
-/// </para>
-/// <para>
-/// The split between this class and <see cref="ServerEnforcementCoordinator"/>
-/// is intentional: the coordinator owns the server-side mutation policy
-/// (Suppress → Save → Broadcast → MarkDirty); the server handlers here are
-/// thin adapters that validate the caller's block selection and delegate.
-/// </para>
+/// Client and server run as separate ModSystem instances, so a given
+/// <see cref="SuaCommands"/> instance services exactly one side.
+/// Side-specific dependencies use <c>null!</c> late-init — VS guarantees the
+/// register method runs before any handler fires.
+/// The coordinator owns the server-side mutation policy; the handlers here
+/// validate input and delegate.
 /// </remarks>
 internal sealed class SuaCommands
 {
@@ -52,10 +36,7 @@ internal sealed class SuaCommands
     private ICoreServerAPI sapi = null!;
     private ServerEnforcementCoordinator serverCoordinator = null!;
 
-    /// <summary>
-    /// Registers the client-side <c>.sua</c> command tree. Called once from
-    /// <c>StartClientSide</c> after the world probe is constructed.
-    /// </summary>
+    /// <summary>Registers the client-side <c>.sua</c> command tree.</summary>
     public void RegisterClient(ICoreClientAPI capi, WorldProbe worldProbe)
     {
         this.capi = capi;
@@ -84,10 +65,7 @@ internal sealed class SuaCommands
             .EndSubCommand();
     }
 
-    /// <summary>
-    /// Registers the server-side <c>/sua</c> command tree. Called once from
-    /// <c>StartServerSide</c> after the enforcement coordinator is constructed.
-    /// </summary>
+    /// <summary>Registers the server-side <c>/sua</c> command tree.</summary>
     public void RegisterServer(ICoreServerAPI sapi, ServerEnforcementCoordinator serverCoordinator)
     {
         this.sapi = sapi;

@@ -13,27 +13,10 @@ namespace StepUpAdvanced.Application;
 /// reload keys.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Phase 8 Step 8.10 extracts this from <c>StepUpAdvancedModSystem</c>.
-/// The default keybinds (Insert/Home/PageUp/PageDown/Up/Down) are
-/// user-fixed and unchanged by the move.
-/// </para>
-/// <para>
-/// The increment/decrement/toggle callbacks are thin adapters over the two
-/// controllers (which own the actual policy), so the controllers are taken
-/// as non-null constructor dependencies — they exist by the time
-/// <c>StartClientSide</c> wires this up.
-/// </para>
-/// <para>
-/// The reload path is deliberately split. The INPUT concerns live here: the
-/// server-enforcement guard, the one-shot "reload blocked" toast, and the
-/// hold-once gate. The state ORCHESTRATION (re-load options from disk,
-/// invalidate caches, re-apply through the controllers, emit the success
-/// line) is owned by the composition root and passed in as
-/// <see cref="reloadConfig"/>. That keeps this class cohesive — input maps
-/// to action — instead of absorbing the ConfigStore / probe / writer /
-/// controller dependency cluster the reload touches.
-/// </para>
+/// The reload path is deliberately split: input concerns (enforcement guard,
+/// blocked toast, hold-once gate) live here; the state orchestration
+/// (load from disk, invalidate caches, re-apply) is passed in as
+/// <see cref="reloadConfig"/> from the composition root.
 /// </remarks>
 internal sealed class HotkeyHandlers
 {
@@ -100,10 +83,6 @@ internal sealed class HotkeyHandlers
     {
         if (toggleHeld?.TryFire() != true) return false;
 
-        // The controllers own the policy: stepController.Toggle flips
-        // stepUpEnabled, persists, re-applies, and emits the toast.
-        // elevateController.ApplyNow then re-pushes the speed against
-        // the new IsEnabled state.
         stepController.Toggle();
         elevateController.ApplyNow(stepController.IsEnabled);
         return true;
@@ -111,19 +90,15 @@ internal sealed class HotkeyHandlers
 
     private bool OnReloadConfig(KeyCombination comb)
     {
-        // Per Phase 3b, EnforcementState.IsEnforced is just a flag read
-        // on the loaded options. Read it directly here.
+
         if (StepUpOptions.Current?.ServerEnforceSettings == true && !StepUpOptions.Current.AllowClientConfigReload)
         {
             if (toasts.ReloadBlocked.TryShow())
                 ChatFormatting.Client(capi, $"{ChatFormatting.Tag} {ChatFormatting.Warn(ChatFormatting.L("server-enforced"))} – {ChatFormatting.Muted(ChatFormatting.L("reload-blocked"))}");
             return false;
         }
-        // Reset position deliberately mirrors the pre-Phase-4
-        // hasShownMaxMessage = false at the same point: after the
-        // enforcement guard passes, before the hold-guard. So the
-        // ReloadBlocked toast re-arms as soon as enforcement permits
-        // reload again, not only after a successful reload.
+        // Re-arm after the enforcement guard so the toast fires again
+        // as soon as enforcement permits reload, not only after a successful one.
         toasts.ReloadBlocked.Reset();
 
         if (reloadHeld?.TryFire() != true)
@@ -131,7 +106,6 @@ internal sealed class HotkeyHandlers
             return false;
         }
 
-        // State orchestration is owned by the composition root.
         reloadConfig();
         return true;
     }

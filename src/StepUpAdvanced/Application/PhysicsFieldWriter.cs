@@ -14,31 +14,13 @@ namespace StepUpAdvanced.Application;
 /// cache lifetime (invalidated together on config reload).
 /// </summary>
 /// <remarks>
-/// <para>
-/// Phase 7a extracts this from <c>StepUpAdvancedModSystem</c>. Behavior
-/// is preserved verbatim — the writer is a structural move, not a logic
-/// change. The lazy-init still binds against <c>phys.GetType()</c> (the
-/// runtime type, not <see cref="EntityBehaviorControlledPhysics"/>
-/// itself) so a subclass that shadows <c>StepHeight</c> or
-/// <c>elevateFactor</c> resolves to its own field, not the base's.
-/// </para>
-/// <para>
-/// The threshold no-op check stays inside the writer because the cache
-/// lives here. From the caller's perspective <see cref="WriteStepHeight"/>
-/// and <see cref="WriteElevateFactor"/> return <c>true</c> on both
-/// "wrote successfully" and "skipped, no change"; they return
-/// <c>false</c> only when the accessor could not resolve the field.
-/// Callers gate their one-time field-missing diagnostic on the
-/// <c>false</c> branch.
-/// </para>
+/// Lazy-init binds against <c>phys.GetType()</c> (the runtime type) so a
+/// subclass that shadows <c>StepHeight</c> resolves to its own field.
+/// Both write methods return <c>true</c> on success or no-op, <c>false</c>
+/// only when the field could not be resolved.
 /// </remarks>
 internal sealed class PhysicsFieldWriter
 {
-    // Reserved for future diagnostic emission. Phase 7a deliberately
-    // keeps the field-missing warnings on the controllers (they own
-    // their warned-once flags), so this reference is currently unused.
-    // Stored for API stability — Phase 8+ may move diagnostic emission
-    // here once the controllers are settled.
     private readonly ICoreClientAPI capi;
 
     // Lazy-initialized on first write so we can resolve fields against
@@ -47,12 +29,9 @@ internal sealed class PhysicsFieldWriter
     private FieldAccessor<EntityBehaviorControlledPhysics, float>? stepHeightAccessor;
     private FieldAccessor<EntityBehaviorControlledPhysics, double>? elevateAccessor;
 
-    // Per-field idempotency. StepHeight is verified by READ-BACK against the
-    // live field (see WriteStepHeight), so it keeps no cached "last written"
-    // value — that cache was the #6 drift bug: an external reset of the physics
-    // behavior left the cache thinking the field was already correct, so we
-    // stopped re-applying. The (vestigial) elevate path keeps its value cache;
-    // nothing in the player path reads elevateFactor, so its drift is moot.
+    // StepHeight uses read-back (see WriteStepHeight) so it has no cache.
+    // The elevate path keeps a value cache; nothing in the player path reads
+    // elevateFactor, so drift there doesn't matter.
     private double lastAppliedElevate = double.NaN;
 
     public PhysicsFieldWriter(ICoreClientAPI capi)
@@ -120,13 +99,7 @@ internal sealed class PhysicsFieldWriter
     /// Resets the elevate idempotency cache so the next elevate write fires
     /// unconditionally. Called by the config-reload path.
     /// </summary>
-    /// <remarks>
-    /// StepHeight no longer participates: it is read-back verified on every
-    /// write (see <see cref="WriteStepHeight"/>), so it re-asserts itself
-    /// against the live field without needing the cache cleared. The call is
-    /// retained for the (vestigial) elevate path and as a stable API for the
-    /// reload site.
-    /// </remarks>
+
     public void InvalidateCache()
     {
         lastAppliedElevate = double.NaN;

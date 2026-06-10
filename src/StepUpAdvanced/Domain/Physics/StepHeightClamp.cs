@@ -7,23 +7,10 @@ namespace StepUpAdvanced.Domain.Physics;
 /// can be unit-tested without any VS API surface.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The clamp is asymmetric by design: the client-side floor
-/// (<see cref="ClientMin"/>) is a hard lower bound that applies in every
-/// context, while the server-side min/max only constrain the value when
-/// <c>isEnforced</c> is true. Defensive against a server configuration
-/// where <c>serverMin &lt; ClientMin</c> — the higher of the two always
-/// wins, so the client never drops below its own floor regardless of
-/// what the server says.
-/// </para>
-/// <para>
-/// Phase 5 deliberately omits an "absolute max" client UX ceiling — that
-/// concept was a dead constant on <c>StepUpAdvancedModSystem</c> pre-Phase-5
-/// (declared but never referenced) and there's no concrete use case to wire
-/// it up right now. If a future phase wants to cap unbounded growth in
-/// non-enforced mode, the right shelf for that constant is here (NOT on the
-/// server-cap side, which is a different concept).
-/// </para>
+/// Asymmetric by design: the client floor (<see cref="ClientMin"/>) applies
+/// always; the server min/max only apply when enforcement is active.
+/// Defensive against <c>serverMin &lt; ClientMin</c> — the higher of the two
+/// always wins so the client never drops below its own floor.
 /// </remarks>
 internal static class StepHeightClamp
 {

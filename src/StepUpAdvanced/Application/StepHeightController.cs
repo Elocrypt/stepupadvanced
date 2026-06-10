@@ -20,34 +20,15 @@ namespace StepUpAdvanced.Application;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Phase 7a extracts this from <c>StepUpAdvancedModSystem</c>. Behavior is
-/// preserved verbatim — same priority order, same toast text, same
-/// ceiling-guard thresholds. Pure compute lives on two static methods
-/// (<see cref="ComputeBaseStepHeight"/> and <see cref="ApplyCeilingGuard"/>)
-/// for test isolation; instance methods wrap the side effects.
+/// <b>Two static pure functions, not one:</b> the ceiling-guard reduction
+/// needs the clearance value, which is bounded by the post-clamp base height.
+/// Splitting at that seam keeps each function independently testable.
 /// </para>
 /// <para>
-/// <b>Why two static pure functions instead of one?</b> The ceiling-guard
-/// reduction needs <c>clearance</c>, which is computed via a world probe
-/// bounded by the post-clamp base height — so the call ordering is
-/// <c>baseHeight → clearance(baseHeight) → final</c>. Folding this into a
-/// single compute function would require either a delegate parameter or a
-/// sentinel "no constraint" value; splitting along the natural seam
-/// keeps each function pure and individually testable.
-/// </para>
-/// <para>
-/// <b>stepUpEnabled lives here</b> because the step-height controller is
-/// the natural source of truth for the mod's master on/off — the toggle
-/// hotkey lives semantically on the height axis (the speed axis just
-/// follows). <see cref="IsEnabled"/> is the read-only property other
-/// callers (notably <c>ElevateFactorController.ApplyNow</c>) consult.
-/// </para>
-/// <para>
-/// <b>Tick frequency:</b> <see cref="ApplyForTick"/> is called every 50 ms
-/// by the ModSystem's <c>RegisterGameTickListener</c> and also push-driven
-/// from Increase/Decrease/Toggle/OnConfigReloaded and the server config
-/// receive path. The writer's idempotency cache (1e-4f threshold)
-/// prevents redundant reflected writes when the value hasn't moved.
+/// <b><see cref="ApplyForTick"/> runs every 50 ms</b> via a tick listener
+/// and is also called push-driven from hotkey actions, toggle, server config
+/// receive, and reload. The writer's idempotency check prevents redundant
+/// reflected writes when the value hasn't changed.
 /// </para>
 /// </remarks>
 internal sealed class StepHeightController
@@ -63,11 +44,9 @@ internal sealed class StepHeightController
     private const float VsBaselineStepHeight = 0.6f;
 
     /// <summary>
-    /// Ceiling-clearance threshold (in blocks) below which the step
-    /// height collapses to <see cref="StepUpOptions.DefaultHeight"/>
-    /// instead of being scaled to the clearance. Empirically tuned
-    /// pre-Phase-5 to avoid hard-snapping the player into a 1-block
-    /// overhang on stair geometry.
+    /// Ceiling-clearance threshold (blocks) below which step height collapses
+    /// to <see cref="StepUpOptions.DefaultHeight"/>. Tuned to avoid
+    /// hard-snapping into a 1-block overhang on stair geometry.
     /// </summary>
     private const float CeilingCollapseThreshold = 0.75f;
 
@@ -76,9 +55,6 @@ internal sealed class StepHeightController
     private readonly PhysicsFieldWriter writer;
     private readonly MessageDebouncer toasts;
 
-    // Closure over ModSystem.QueueConfigSave (the 200 ms debounced write
-    // path with idempotency gate). Phase 7b is expected to eliminate the
-    // static queue state on ModSystem; this delegate is the interim glue.
     private readonly Action persistConfig;
 
     /// <summary>
@@ -136,10 +112,7 @@ internal sealed class StepHeightController
     /// </summary>
     public bool InitializeFromConfig()
     {
-        // Capture once + guard once. Same pattern as
-        // ElevateFactorController.InitializeFromConfig: subsequent uses are
-        // flow-narrowed non-nullable, which silences CS8602 on the
-        // write-back assignment without scattering null checks.
+        // Capture once so subsequent property reads are flow-narrowed non-nullable.
         var opts = StepUpOptions.Current;
         if (opts == null) return false;
 
@@ -186,14 +159,9 @@ internal sealed class StepHeightController
         }
         warnedPlayerNullOnce = false;
 
-        // player.Entity (and its Pos) can be transiently null across a
-        // teleport / dimension change / the first ticks after join — the same
-        // window a structure-triggered chunk relight can land in. Guard before
-        // ANY Entity deref: GetBehavior below, plus Pos/World/Motion read inside
-        // IsNearBlacklistedBlock and DistanceToCeiling. (The shipped 1.3.0 NRE
-        // surfaced one frame deeper, in the blacklist probe; the refactor's
-        // null-guarded CellIsBlacklisted closes that, but the Entity itself was
-        // still unguarded on this path.)
+        // Entity and Pos can be transiently null across a teleport, dimension
+        // change, or on the first ticks after joining. Guard before any Entity
+        // deref — GetBehavior, Pos, and Motion are all downstream of this check.
         if (player.Entity?.Pos == null)
         {
             if (!warnedEntityNullOnce)
@@ -234,7 +202,6 @@ internal sealed class StepHeightController
             player.Entity.OnGround,
             player.Entity.Swimming);
 
-        // Step 1: base height (priority composition, no ceiling guard).
         bool nearBlacklistedBlock = IsNearBlacklistedBlock(player);
         float baseHeight = ComputeBaseStepHeight(
             stepUpEnabled,
@@ -246,10 +213,8 @@ internal sealed class StepHeightController
             cfg.ServerMinStepHeight,
             cfg.ServerMaxStepHeight);
 
-        // Step 2: ceiling guard, only when enabled and base height > 0.
-        // DistanceToCeiling is bounded by baseHeight — the clearance
-        // input depends on the post-clamp value, hence the two-phase
-        // compute split.
+        // Ceiling guard: clearance is bounded by baseHeight, so it must be
+        // computed after the base height is finalized.
         float finalHeight = baseHeight;
         if (cfg.CeilingGuardEnabled && baseHeight > 0f)
         {
@@ -339,8 +304,7 @@ internal sealed class StepHeightController
 
     /// <summary>
     /// Hotkey body for the "increase height" action (PageUp by default).
-    /// Returns <c>true</c> if the press was consumed; <c>false</c>
-    /// otherwise. Mirrors the pre-Phase-7a <c>OnIncreaseStepHeight</c>.
+    /// Returns <c>true</c> if the press was consumed; <c>false</c> otherwise.
     /// </summary>
     public bool Increase()
     {
@@ -390,12 +354,11 @@ internal sealed class StepHeightController
 
     /// <summary>
     /// Hotkey body for the "decrease height" action (PageDown by default).
-    /// Suppresses the redundant generic "Height » X" toast on the press
-    /// that lands at the client floor — see CHANGELOG "Phase 4 polish".
+    /// Suppresses the redundant generic "Height » X" toast when the press
+    /// lands at the client floor.
     /// </summary>
     public bool Decrease()
     {
-        // Capture once + guard once.
         var opts = StepUpOptions.Current;
         if (opts == null) return false;
 
@@ -429,10 +392,8 @@ internal sealed class StepHeightController
 
         if (currentStepHeight < previous)
         {
-            // True when this descent lands us at (or below) the client
-            // hard floor. Drives both the at-min toast and the
-            // suppression of the redundant generic "Height » 0.6" update
-            // — see CHANGELOG "Phase 4 polish".
+            // True when this descent reaches the client hard floor: drives
+            // the at-min toast and suppresses the redundant "Height » 0.6" update.
             bool atFloor = currentStepHeight <= StepHeightClamp.ClientMin;
             if (atFloor && toasts.HeightAtMin.TryShow())
             {
@@ -450,11 +411,8 @@ internal sealed class StepHeightController
     }
 
     /// <summary>
-    /// Flips <see cref="stepUpEnabled"/>, persists, pushes the step
-    /// height through the writer, and emits the enable/disable toast.
-    /// The caller is responsible for the cross-controller speed re-apply
-    /// via <see cref="IsEnabled"/> — the <c>toggleHeld</c> hold-once
-    /// guard also stays on the caller (input mechanics, not policy).
+    /// Flips <see cref="stepUpEnabled"/>, persists, and emits the enable/disable toast.
+    /// The caller re-applies the speed axis after calling this.
     /// </summary>
     public void Toggle()
     {
@@ -482,17 +440,12 @@ internal sealed class StepHeightController
     }
 
     /// <summary>
-    /// Thin wrapper over <see cref="WorldProbe.NearBlacklistedBlock"/>.
-    /// Encodes the policy decision: when enforcement is off, the
-    /// server-side list is excluded from the union; the client-side list
-    /// is always consulted.
+    /// Checks whether the player is near a blacklisted block. The server list
+    /// is only included when enforcement is active.
     /// </summary>
     private bool IsNearBlacklistedBlock(IClientPlayer player)
     {
-        // Caller composes the effective lists; WorldProbe.BlacklistCache
-        // observes a different reference (or null) when enforcement
-        // transitions, which the MarkDirty hooks at the enforcement-change
-        // sites turn into a cache rebuild.
+        // Server list is excluded when enforcement is off.
         var serverList = IsEnforced ? StepUpOptions.Current?.BlockBlacklist : null;
         var clientList = BlockBlacklistOptions.Current?.BlockCodes;
 
@@ -505,10 +458,8 @@ internal sealed class StepHeightController
     }
 
     /// <summary>
-    /// Orchestrator: combines the "here" clearance check with the
-    /// forward-column check guarded by <c>RequireForwardSupport</c> and
-    /// <c>ForwardProbeCeiling</c> flags. Per-cell world queries live on
-    /// <see cref="WorldProbe"/>; math lives on
+    /// Combines the "here" clearance check with the forward-column check.
+    /// World queries live on <see cref="WorldProbe"/>; math on
     /// <see cref="CeilingProbeMath"/>; this method holds the policy.
     /// </summary>
     private float DistanceToCeiling(IClientPlayer player, float requestedStep)

@@ -13,16 +13,12 @@ namespace StepUpAdvanced.Configuration;
 /// <see cref="StepUpOptions.BlockBlacklist"/>). Client and server
 /// blacklists are merged at runtime by the proximity checker.
 /// </para>
-/// <para>
-/// The on-disk JSON file name is <c>StepUpAdvanced_BlockBlacklist.json</c> —
-/// kept identical to pre-Phase-2c so existing user data loads unchanged.
-/// </para>
+
 /// </remarks>
 public class BlockBlacklistOptions
 {
     /// <summary>
     /// Schema version. Bumped when the file shape requires migration.
-    /// Currently no migrations exist for this options file (only one schema version).
     /// </summary>
     public int SchemaVersion { get; set; } = 1;
 

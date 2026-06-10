@@ -10,11 +10,7 @@ namespace StepUpAdvanced.Core;
 /// Chat-formatting helpers for StepUp Advanced. Builds colored, bolded, and
 /// localized chat strings with the consistent <c>[StepUp Advanced]</c> tag.
 /// </summary>
-/// <remarks>
-/// Aliased as <c>SuaChat</c> at call sites in <c>StepUpAdvancedModSystem</c> via
-/// a <c>using</c> directive, so existing call sites keep compiling unchanged.
-/// Phase 8 will sweep call sites to use the new full name.
-/// </remarks>
+
 internal static class ChatFormatting
 {
     public const string CAccent = "#5bc0de";

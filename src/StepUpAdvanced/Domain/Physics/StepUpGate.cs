@@ -8,32 +8,11 @@ namespace StepUpAdvanced.Domain.Physics;
 /// without any VS API surface.
 /// </summary>
 /// <remarks>
-/// <para>
-/// <b>Behavior preservation:</b> both flags default off, so the common case
-/// (<c>sprintOnly == false</c> and <c>disableWhileSneaking == false</c>)
-/// returns <c>true</c> unconditionally — the height path behaves exactly as it
-/// did before this gate existed until a user opts in.
-/// </para>
-/// <para>
-/// <b>Why a shared helper</b> rather than inline <c>controls.Sprint</c> checks:
-/// the sprint-only, disable-while-sneaking, and disable-while-airborne features
-/// all decide the same question — "should the enhanced step height apply this
-/// tick" — off the player's live control and ground state. Centralizing the
-/// policy keeps the height path's composition readable and gives the
-/// sprint/sneak/ground interaction a single tested source of truth. Sprint and
-/// sneak are mutually exclusive in practice (VS won't set both at once), but the
-/// gate treats every input independently so it stays correct even if that
-/// invariant ever changes.
-/// </para>
-/// <para>
-/// <b>Scope — height axis only.</b> The rise-speed axis lives in the
-/// Harmony-patched <c>EntityBehaviorPlayerPhysics.TryStepSmooth</c>, which
-/// already differentiates sprint/sneak/walk via its own elevateFactor branches.
-/// Collapsing the step height to the vanilla baseline when the gate is closed
-/// is sufficient to make "step up only while sprinting" behave, because a
-/// vanilla step height <i>is</i> the no-enhanced-step-up state regardless of
-/// rise speed.
-/// </para>
+/// All flags default off, so the common case returns <c>true</c> unconditionally
+/// until a user opts in. Sprint and sneak are mutually exclusive in practice but
+/// are evaluated independently so the gate stays correct regardless.
+/// Scope is the height axis only — the rise-speed axis differentiates
+/// sprint/sneak/walk via its own elevateFactor branches.
 /// </remarks>
 internal static class StepUpGate
 {

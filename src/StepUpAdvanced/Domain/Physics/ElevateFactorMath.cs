@@ -6,13 +6,7 @@ namespace StepUpAdvanced.Domain.Physics;
 /// asymmetry between client floor (always applies) and server range
 /// (only when enforced).
 /// </summary>
-/// <remarks>
-/// See <see cref="StepHeightClamp"/> for the design rationale; the only
-/// differences here are the numeric values (0.7 vs 0.6 floor) and the
-/// units (dimensionless multiplier vs blocks). There's no "absolute max"
-/// constant for the same reason as on the height side — dead pre-Phase-5,
-/// no concrete use case to wire up now.
-/// </remarks>
+
 internal static class ElevateFactorMath
 {
     /// <summary>
