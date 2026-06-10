@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to package (e.g. 1.2.5)'
+        description: 'Version to package (e.g. 1.4.0)'
         required: true
         type: string
 
@@ -40,26 +40,46 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Resolved version: $version"
 
-      # Same caveat as ci.yml: requires Vintage Story DLLs accessible to the
-      # runner. Wire VINTAGE_STORY to a private artifact or self-hosted runner
-      # before enabling.
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $content = Get-Content CHANGELOG.md -Raw
+
+          # Match the section for this version up to (but not including) the next heading
+          $pattern = "(?s)## \[$([regex]::Escape($version))\][^\n]*\n(.+?)(?=\n## \[|\z)"
+          $match = [regex]::Match($content, $pattern)
+
+          if ($match.Success) {
+            $notes = $match.Groups[1].Value.Trim()
+            Write-Host "Extracted release notes for v$version"
+          } else {
+            $notes = "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+            Write-Host "Warning: No CHANGELOG section found for v$version — using fallback."
+          }
+
+          $notes | Out-File -FilePath release_notes.md -Encoding utf8
+          Write-Host "--- Notes preview ---"
+          Write-Host $notes
+
+      # Requires Vintage Story DLLs accessible to the runner.
+      # Wire VINTAGE_STORY to a private artifact or self-hosted runner to enable.
       - name: Package release
-        if: false  # Enable once VINTAGE_STORY is reachable from this runner
+        id: package
+        if: ${{ env.VINTAGE_STORY != '' }}
         shell: pwsh
         env:
           VINTAGE_STORY: ${{ secrets.VINTAGE_STORY_PATH }}
         run: |
           ./build/package.ps1 -Version '${{ steps.version.outputs.version }}'
+          "built=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create GitHub Release
-        if: false  # Enable in the same step as the package step above
         uses: softprops/action-gh-release@v2
         with:
-          files: build/dist/StepUpAdvanced_${{ steps.version.outputs.version }}.zip
-          generate_release_notes: true
-
-      - name: Notice
-        if: always()
-        run: |
-          echo "Release packaging is gated until Vintage Story DLLs are reachable in CI."
-          echo "Run ./build/package.ps1 -Version <X.Y.Z> locally to produce the zip in the meantime."
+          name: StepUp Advanced v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          files: ${{ steps.package.outputs.built == 'true' && format('build/dist/StepUpAdvanced_{0}.zip', steps.version.outputs.version) || '' }}
+          draft: false
+          prerelease: false
