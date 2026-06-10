@@ -35,8 +35,6 @@ jobs:
 
       - name: Build & run tests
         if: ${{ env.VINTAGE_STORY != '' }}
-        env:
-          VINTAGE_STORY: ${{ env.VINTAGE_STORY }}
         run: dotnet test tests/StepUpAdvanced.Tests/StepUpAdvanced.Tests.csproj -c Release --nologo --logger "console;verbosity=normal"
 
       - name: Skip (Vintage Story DLL path not configured)
