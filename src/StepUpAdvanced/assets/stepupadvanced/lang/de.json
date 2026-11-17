@@ -1,6 +1,6 @@
 {
   "comment_description": "Deutsche Übersetzungsdatei für 'StepUp Advanced'.",
-  "comment_version": "Mod Version: v1.3.1",
+  "comment_version": "Mod Version: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, machine-assisted",
   "comment_technical_details": "Neutraler Ton, IT-Begriffe beibehalten (StepUp, Harmony, Server API). Plural bei {0} als 'Blöcke'. Vor-/Nachlauf-Leerzeichen aus dem Original beibehalten.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Nur-Geschwindigkeit-Modus ",
   "sua:height-controls-disabled": " Höhensteuerung deaktiviert ",
+
+  "sua:basic-mode": " Basismodus ",
+  "sua:basic-mode-locked": " Höhe und Geschwindigkeit sind auf diesem Server gesperrt ",
+  "sua:basic-mode-notice": " Dieser Server verwendet StepUp Advanced nicht. Nur Ein/Aus: 1,2 Blöcke bei normaler Geschwindigkeit. ",
 
   "sua:server-enforced": " Server erzwingt ",
   "sua:height-change-blocked": " Höhenänderung blockiert ",

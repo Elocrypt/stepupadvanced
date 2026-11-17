@@ -1,6 +1,6 @@
 {
   "comment_description": "“StepUp Advanced” 简体中文本地化文件。",
-  "comment_version": "模组版本：v1.3.1",
+  "comment_version": "模组版本：v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "社区，机器协助",
   "comment_technical_details": "保持中性语气。技术名未翻译（StepUp、Harmony、Server API）。{0} 占位符保留。保留前后空格。",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " 仅速度模式 ",
   "sua:height-controls-disabled": " 高度控制已禁用 ",
+
+  "sua:basic-mode": " 基础模式 ",
+  "sua:basic-mode-locked": " 此服务器上的高度和速度已锁定 ",
+  "sua:basic-mode-notice": " 此服务器未安装 StepUp Advanced。仅可开关：正常速度下 1.2 方块。 ",
 
   "sua:server-enforced": " 由服务器强制 ",
   "sua:height-change-blocked": " 高度更改已被阻止 ",

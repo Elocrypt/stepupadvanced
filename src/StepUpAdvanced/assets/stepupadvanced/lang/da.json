@@ -1,6 +1,6 @@
 {
   "comment_description": "Dansk lokaliseringsfil for 'StepUp Advanced'.",
-  "comment_version": "Mod-version: v1.3.1",
+  "comment_version": "Mod-version: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Fællesskab, maskinassisteret",
   "comment_technical_details": "Neutral stil. Tekniske navne uændrede (StepUp, Harmony, Server API). {0} bevares. Mellemrum bevaret.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Kun-hastighed-tilstand ",
   "sua:height-controls-disabled": " Højdestyring deaktiveret ",
+
+  "sua:basic-mode": " Basistilstand ",
+  "sua:basic-mode-locked": " Højde og hastighed er låst på denne server ",
+  "sua:basic-mode-notice": " Denne server kører ikke StepUp Advanced. Kun til/fra: 1,2 blokke ved normal hastighed. ",
 
   "sua:server-enforced": " Håndhævet af serveren ",
   "sua:height-change-blocked": " Højdeforandring blokeret ",

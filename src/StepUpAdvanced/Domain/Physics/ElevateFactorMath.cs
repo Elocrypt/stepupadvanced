@@ -10,9 +10,14 @@ namespace StepUpAdvanced.Domain.Physics;
 internal static class ElevateFactorMath
 {
     /// <summary>
-    /// Hard lower bound for client-side step speed. The 0.7 value
-    /// approximates VS's default elevate factor — clamping to this floor
-    /// effectively means "the mod isn't slowing the step animation."
+    /// The multiplier that leaves VS's rise speed unchanged. Used when step-up
+    /// is toggled off and as the starting value before any config is applied.
+    /// </summary>
+    public const float Vanilla = 1.0f;
+
+    /// <summary>
+    /// Hard lower bound for the client-side step-speed multiplier
+    /// (1.0 = vanilla rise speed, so 0.7 is the slowest a player can set).
     /// </summary>
     public const float ClientMin = 0.7f;
 
@@ -42,5 +47,31 @@ internal static class ElevateFactorMath
         if (result < effectiveMin) return effectiveMin;
         if (result > serverMax) return serverMax;
         return result;
+    }
+
+    /// <summary>
+    /// The rise-speed multiplier that should actually be in effect. Priority,
+    /// top to bottom: Basic mode pins <see cref="BasicMode.StepSpeed"/>; step-up
+    /// toggled off is <see cref="Vanilla"/>, matching the height axis dropping
+    /// to vanilla; otherwise the requested speed through <see cref="Clamp"/>,
+    /// so enforced server caps always apply.
+    /// </summary>
+    /// <param name="basic">Basic mode is active (server doesn't run the mod).</param>
+    /// <param name="stepUpEnabled">The player's step-up toggle.</param>
+    /// <param name="requested">The player's configured speed.</param>
+    /// <param name="isEnforced">Whether server enforcement is active.</param>
+    /// <param name="serverMin">Server minimum; ignored when not enforced.</param>
+    /// <param name="serverMax">Server maximum; ignored when not enforced.</param>
+    public static float ResolveEffective(
+        bool basic,
+        bool stepUpEnabled,
+        float requested,
+        bool isEnforced,
+        float serverMin,
+        float serverMax)
+    {
+        if (basic) return BasicMode.StepSpeed;
+        if (!stepUpEnabled) return Vanilla;
+        return Clamp(requested, isEnforced, serverMin, serverMax);
     }
 }

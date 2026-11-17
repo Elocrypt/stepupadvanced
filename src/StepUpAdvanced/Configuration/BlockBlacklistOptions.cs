@@ -13,7 +13,6 @@ namespace StepUpAdvanced.Configuration;
 /// <see cref="StepUpOptions.BlockBlacklist"/>). Client and server
 /// blacklists are merged at runtime by the proximity checker.
 /// </para>
-
 /// </remarks>
 public class BlockBlacklistOptions
 {

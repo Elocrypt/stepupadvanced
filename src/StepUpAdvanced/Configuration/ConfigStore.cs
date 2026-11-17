@@ -6,6 +6,7 @@ using System.Threading;
 using StepUpAdvanced.Configuration.Migrations;
 using StepUpAdvanced.Core;
 using StepUpAdvanced.Domain.Physics;
+using StepUpAdvanced.Infrastructure.Network;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -266,64 +267,71 @@ internal static class ConfigStore
     /// safe via global mutex + in-process lock + retry-with-backoff.
     /// </summary>
     /// <remarks>
-    /// On a remote-MP client, the server-managed <c>BlockBlacklist</c> is
-    /// temporarily swapped out for an empty list before writing so the server's
-    /// pushed blacklist never pollutes the player's local config file. The swap
-    /// is bypassed in single-player, where the player owns the full config.
+    /// On a remote-MP client, the server-owned fields in memory (enforcement
+    /// flag, min/max caps, client permissions, server blacklist) were pushed by
+    /// that server. The client and the single-player integrated server share
+    /// this file, so saving them would carry the server's enforcement into the
+    /// player's own worlds. Instead the player's existing values for those
+    /// fields are re-read from disk and written back unchanged; only
+    /// client-owned fields are updated. Single-player saves everything, since
+    /// the player owns the full config there.
     /// </remarks>
     public static void Save(ICoreAPI api)
     {
-        // Remote-MP client: swap out the server blacklist before saving so it
-        // never pollutes the player's local config. Skipped in single-player.
-        bool isClientSide = api is ICoreClientAPI;
-        bool isRemoteMultiplayerClient = isClientSide && !((ICoreClientAPI)api).IsSinglePlayer;
-        List<string>? savedBlacklist = null;
-        if (isRemoteMultiplayerClient)
-        {
-            savedBlacklist = StepUpOptions.Current.BlockBlacklist;
-            StepUpOptions.Current.BlockBlacklist = new List<string>();
-        }
+        bool isRemoteMultiplayerClient = api is ICoreClientAPI capi && !capi.IsSinglePlayer;
 
-        try
+        lock (_saveLock)
         {
-            lock (_saveLock)
+            using var mutex = new Mutex(false, GlobalMutexName);
+            bool got = false;
+            try { got = mutex.WaitOne(500); } catch { }
+
+            if (!got)
             {
-                using var mutex = new Mutex(false, GlobalMutexName);
-                bool got = false;
-                try { got = mutex.WaitOne(500); } catch { }
+                ModLog.Warning(api, "Could not acquire config save mutex; skipping save.");
+                return;
+            }
 
-                if (!got)
+            // Built under the mutex so the disk read and the write see the same file.
+            StepUpOptions toStore = isRemoteMultiplayerClient
+                ? ConfigSyncPacketMapper.WithLocalServerFields(StepUpOptions.Current, TryLoadFromDisk(api))
+                : StepUpOptions.Current;
+
+            const int maxAttempts = 8;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
                 {
-                    ModLog.Warning(api, "Could not acquire config save mutex; skipping save.");
+                    api.StoreModConfig(toStore, FileName);
+                    ModLog.Verbose(api, "Saved configuration.");
                     return;
                 }
-                const int maxAttempts = 8;
-                for (int attempt = 1; attempt <= maxAttempts; attempt++)
+                catch (IOException ioex)
                 {
-                    try
-                    {
-                        api.StoreModConfig(StepUpOptions.Current, FileName);
-                        ModLog.Verbose(api, "Saved configuration.");
-                        return;
-                    }
-                    catch (IOException ioex)
-                    {
-                        int delayMs = 15 * (1 << Math.Min(attempt, 6)) + new Random().Next(0, 10);
-                        ModLog.Warning(api, "Save {0}/{1} failed: {2}. Retrying in {3} ms.",
-                            attempt, maxAttempts, ioex.Message, delayMs);
-                        Thread.Sleep(delayMs);
-                    }
+                    int delayMs = 15 * (1 << Math.Min(attempt, 6)) + new Random().Next(0, 10);
+                    ModLog.Warning(api, "Save {0}/{1} failed: {2}. Retrying in {3} ms.",
+                        attempt, maxAttempts, ioex.Message, delayMs);
+                    Thread.Sleep(delayMs);
                 }
-                ModLog.Error(api, "Could not save configuration after multiple attempts.");
             }
+            ModLog.Error(api, "Could not save configuration after multiple attempts.");
         }
-        finally
+    }
+
+    /// <summary>
+    /// Reads the config file as it currently is on disk, or <c>null</c> if it
+    /// is missing or unreadable (the caller then falls back to defaults).
+    /// </summary>
+    private static StepUpOptions? TryLoadFromDisk(ICoreAPI api)
+    {
+        try
         {
-            // Restore even on failure so a bad save doesn't blank the runtime blacklist.
-            if (isRemoteMultiplayerClient && savedBlacklist != null)
-            {
-                StepUpOptions.Current.BlockBlacklist = savedBlacklist;
-            }
+            return api.LoadModConfig<StepUpOptions>(FileName);
+        }
+        catch (Exception ex)
+        {
+            ModLog.Warning(api, "Could not read config before saving; using defaults for server-owned fields: {0}", ex.Message);
+            return null;
         }
     }
 

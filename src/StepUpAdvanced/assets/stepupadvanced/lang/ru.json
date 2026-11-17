@@ -1,6 +1,6 @@
 {
   "comment_description": "Русский файл локализации для 'StepUp Advanced'.",
-  "comment_version": "Версия мода: v1.3.1",
+  "comment_version": "Версия мода: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Сообщество, машинная помощь",
   "comment_technical_details": "Нейтральный стиль. Технические имена сохранены (StepUp, Harmony, Server API). Для {0} использовано общее множественное 'блоков'. Пробелы сохранены.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Режим только скорости ",
   "sua:height-controls-disabled": " Управление высотой отключено ",
+
+  "sua:basic-mode": " Базовый режим ",
+  "sua:basic-mode-locked": " Высота и скорость заблокированы на этом сервере ",
+  "sua:basic-mode-notice": " На этом сервере нет StepUp Advanced. Только включение/выключение: 1,2 блока на обычной скорости. ",
 
   "sua:server-enforced": " Принудительно сервером ",
   "sua:height-change-blocked": " Изменение высоты заблокировано ",

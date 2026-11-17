@@ -1,6 +1,6 @@
 {
   "comment_description": "Polski plik lokalizacji dla 'StepUp Advanced'.",
-  "comment_version": "Wersja moda: v1.3.1",
+  "comment_version": "Wersja moda: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Społeczność, tłumaczenie wspomagane",
   "comment_technical_details": "Styl neutralny. Zachowano nazwy techniczne (StepUp, Harmony, Server API). {0} zachowane. Użyto formy 'bloków' jako liczby mnogiej ogólnej.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Tryb tylko prędkość ",
   "sua:height-controls-disabled": " Sterowanie wysokością wyłączone ",
+
+  "sua:basic-mode": " Tryb podstawowy ",
+  "sua:basic-mode-locked": " Wysokość i prędkość są zablokowane na tym serwerze ",
+  "sua:basic-mode-notice": " Ten serwer nie ma StepUp Advanced. Tylko włącz/wyłącz: 1,2 bloku przy normalnej prędkości. ",
 
   "sua:server-enforced": " Wymuszone przez serwer ",
   "sua:height-change-blocked": " Zmiana wysokości zablokowana ",

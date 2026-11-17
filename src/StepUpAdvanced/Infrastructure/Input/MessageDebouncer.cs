@@ -39,6 +39,9 @@ internal sealed class MessageDebouncer
 
     /// <summary>Fired on server-enforcement transitions (on/off).</summary>
     public OnceFlag ServerEnforcement { get; } = new();
+
+    /// <summary>"basic-mode – basic-mode-locked" toast when a height/speed key is pressed in Basic mode.</summary>
+    public OnceFlag BasicModeLocked { get; } = new();
 }
 
 /// <summary>

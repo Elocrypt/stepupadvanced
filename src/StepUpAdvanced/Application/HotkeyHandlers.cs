@@ -55,12 +55,12 @@ internal sealed class HotkeyHandlers
     public void Register()
     {
         var binder = new HotkeyBinder(capi);
-        binder.Bind("increaseStepHeight", Lang.Get("key.increase-height"), GlKeys.PageUp,   OnIncreaseStepHeight);
-        binder.Bind("decreaseStepHeight", Lang.Get("key.decrease-height"), GlKeys.PageDown, OnDecreaseStepHeight);
-        binder.Bind("increaseStepSpeed",  Lang.Get("key.increase-speed"),  GlKeys.Up,       OnIncreaseElevateFactor);
-        binder.Bind("decreaseStepSpeed",  Lang.Get("key.decrease-speed"),  GlKeys.Down,     OnDecreaseElevateFactor);
-        binder.Bind("toggleStepUp",       Lang.Get("key.toggle"),          GlKeys.Insert,   OnToggleStepUp);
-        binder.Bind("reloadConfig",       Lang.Get("key.reload"),          GlKeys.Home,     OnReloadConfig);
+        binder.Bind("increaseStepHeight", KeyLabel("sua:key.increase-height"), GlKeys.PageUp,   OnIncreaseStepHeight);
+        binder.Bind("decreaseStepHeight", KeyLabel("sua:key.decrease-height"), GlKeys.PageDown, OnDecreaseStepHeight);
+        binder.Bind("increaseStepSpeed",  KeyLabel("sua:key.increase-speed"),  GlKeys.Up,       OnIncreaseElevateFactor);
+        binder.Bind("decreaseStepSpeed",  KeyLabel("sua:key.decrease-speed"),  GlKeys.Down,     OnDecreaseElevateFactor);
+        binder.Bind("toggleStepUp",       KeyLabel("sua:key.toggle"),          GlKeys.Insert,   OnToggleStepUp);
+        binder.Bind("reloadConfig",       KeyLabel("sua:key.reload"),          GlKeys.Home,     OnReloadConfig);
 
         // KeyHoldTracker subscribes to capi.Event.KeyUp internally for its
         // hotkey id and clears the held flag on key release. Constructed
@@ -70,14 +70,39 @@ internal sealed class HotkeyHandlers
         reloadHeld = new KeyHoldTracker(capi, "reloadConfig");
     }
 
+    /// <summary>
+    /// Controls-menu label: "StepUp Advanced: Toggle Step Up". The prefix
+    /// groups the six binds visually since the menu lists every mod's keys
+    /// together. Keys need the "sua:" domain to match the lang files, or
+    /// Lang.Get misses and returns the raw key. Lang values carry padding
+    /// spaces for chat output, so they're trimmed here.
+    /// </summary>
+    private static string KeyLabel(string langKey)
+        => $"{Lang.Get("sua:modname").Trim()}: {Lang.Get(langKey).Trim()}";
+
+    // Height/speed keys are refused in Basic mode before reaching the
+    // controllers, so nothing is written to the config either.
     private bool OnIncreaseStepHeight(KeyCombination comb)
-        => stepController.Increase();
+        => !RejectInBasicMode() && stepController.Increase();
     private bool OnDecreaseStepHeight(KeyCombination comb)
-        => stepController.Decrease();
+        => !RejectInBasicMode() && stepController.Decrease();
     private bool OnIncreaseElevateFactor(KeyCombination comb)
-        => elevateController.Increase(stepController.IsEnabled);
+        => !RejectInBasicMode() && elevateController.Increase(stepController.IsEnabled);
     private bool OnDecreaseElevateFactor(KeyCombination comb)
-        => elevateController.Decrease(stepController.IsEnabled);
+        => !RejectInBasicMode() && elevateController.Decrease(stepController.IsEnabled);
+
+    /// <summary>
+    /// Returns <c>true</c> (and toasts once) when Basic mode locks the
+    /// height/speed keys.
+    /// </summary>
+    private bool RejectInBasicMode()
+    {
+        if (!BasicModeState.Active) return false;
+
+        if (toasts.BasicModeLocked.TryShow())
+            ChatFormatting.Client(capi, $"{ChatFormatting.Tag} {ChatFormatting.Warn(ChatFormatting.L("basic-mode"))} – {ChatFormatting.Muted(ChatFormatting.L("basic-mode-locked"))}");
+        return true;
+    }
 
     private bool OnToggleStepUp(KeyCombination comb)
     {
@@ -90,8 +115,10 @@ internal sealed class HotkeyHandlers
 
     private bool OnReloadConfig(KeyCombination comb)
     {
-
-        if (StepUpOptions.Current?.ServerEnforceSettings == true && !StepUpOptions.Current.AllowClientConfigReload)
+        // Skipped in Basic mode: the local enforcement flag describes the
+        // player's own single-player setup, not this server, and a reload
+        // can't raise anything there.
+        if (!BasicModeState.Active && StepUpOptions.Current?.ServerEnforceSettings == true && !StepUpOptions.Current.AllowClientConfigReload)
         {
             if (toasts.ReloadBlocked.TryShow())
                 ChatFormatting.Client(capi, $"{ChatFormatting.Tag} {ChatFormatting.Warn(ChatFormatting.L("server-enforced"))} – {ChatFormatting.Muted(ChatFormatting.L("reload-blocked"))}");

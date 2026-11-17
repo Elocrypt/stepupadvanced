@@ -5,23 +5,21 @@ using StepUpAdvanced.Domain.Physics;
 using StepUpAdvanced.Infrastructure.Input;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.GameContent;
 
 namespace StepUpAdvanced.Application;
 
 /// <summary>
-/// Push-driven owner of the player's step-speed (elevate factor). Owns
-/// <see cref="currentElevateFactor"/>, the elevate-factor warned-once
-/// diagnostic flag, and the two hotkey-handler bodies for the speed
-/// axis. Calls through <see cref="PhysicsFieldWriter"/> for the actual
-/// reflected write.
+/// Push-driven owner of the player's step speed. Owns
+/// <see cref="currentElevateFactor"/> and the two hotkey-handler bodies for
+/// the speed axis, and publishes the effective speed to
+/// <see cref="StepSpeedState"/> for the Harmony getters.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Push-driven, not tick-driven.</b> The elevate factor changes
-/// infrequently and is pushed on events that change it: user actions,
-/// toggle, server config receive, and config reload. The writer's
-/// idempotency check prevents redundant reflected writes.
+/// <b>Push-driven, not tick-driven.</b> The effective speed only changes on
+/// user actions, toggle, server config receive, config reload, and leaving
+/// Basic mode, so it is re-resolved on those events. Every one of them ends
+/// in <see cref="ApplyNow"/>.
 /// </para>
 /// <para>
 /// <b><c>stepUpEnabled</c> is a method parameter</b> rather than internal
@@ -32,7 +30,6 @@ namespace StepUpAdvanced.Application;
 internal sealed class ElevateFactorController
 {
     private readonly ICoreClientAPI capi;
-    private readonly PhysicsFieldWriter writer;
     private readonly MessageDebouncer toasts;
 
     private readonly Action persistConfig;
@@ -45,29 +42,20 @@ internal sealed class ElevateFactorController
     /// </summary>
     private float currentElevateFactor;
 
-    /// <summary>
-    /// Once-warning gate for the rare case where the VS API renamed the
-    /// <c>elevateFactor</c> field and the writer can't resolve it on the
-    /// runtime physics type.
-    /// </summary>
-    private bool elevateWarnedOnce;
-
     public ElevateFactorController(
         ICoreClientAPI capi,
-        PhysicsFieldWriter writer,
         MessageDebouncer toasts,
         Action persistConfig)
     {
         this.capi = capi;
-        this.writer = writer;
         this.toasts = toasts;
         this.persistConfig = persistConfig;
     }
 
     /// <summary>
-    /// Read-only view of the current target speed. Exposed for diagnostic
-    /// callers; <see cref="ApplyNow"/> is the only path that pushes to
-    /// physics.
+    /// Read-only view of the player's configured speed. Exposed for diagnostic
+    /// callers; <see cref="ApplyNow"/> is the only path that changes what
+    /// physics uses.
     /// </summary>
     public float Current => currentElevateFactor;
 
@@ -100,55 +88,23 @@ internal sealed class ElevateFactorController
     }
 
     /// <summary>
-    /// Pushes the current desired elevate factor to the player's physics
-    /// behavior via <see cref="PhysicsFieldWriter"/>. Emits the
-    /// "field-missing" warning at most once if the writer can't resolve
-    /// the field on the runtime physics type.
+    /// Resolves the effective speed from the current inputs and publishes it
+    /// to <see cref="StepSpeedState"/>. Clamping here, not only in the hotkey
+    /// paths, is what makes a server's speed caps apply from the moment its
+    /// config arrives, whatever the player's file says.
     /// </summary>
     public void ApplyNow(bool stepUpEnabled)
     {
-        var player = capi.World?.Player;
-        if (player?.Entity == null) return;
+        var opts = StepUpOptions.Current;
+        if (opts == null) return;
 
-        var physicsBehavior = player.Entity.GetBehavior<EntityBehaviorControlledPhysics>();
-        if (physicsBehavior == null) return;
-
-        double desired = ComputeDesiredElevateFactor(
+        StepSpeedState.Publish(ElevateFactorMath.ResolveEffective(
+            BasicModeState.Active,
             stepUpEnabled,
-            isEnforced: IsEnforced,
-            currentElevateFactor: currentElevateFactor,
-            optionsStepSpeed: StepUpOptions.Current.StepSpeed,
-            defaultSpeed: StepUpOptions.Current.DefaultSpeed,
-            serverMinSpeed: StepUpOptions.Current.ServerMinStepSpeed,
-            serverMaxSpeed: StepUpOptions.Current.ServerMaxStepSpeed);
-
-        if (writer.WriteElevateFactor(physicsBehavior, desired)) return;
-
-        if (!elevateWarnedOnce)
-        {
-            ModLog.Warning(capi, "Failed to resolve elevateFactor field on physics behavior; speed adjustments disabled.");
-            elevateWarnedOnce = true;
-        }
-    }
-
-    /// <summary>
-    /// Pure compute for the desired elevate-factor write value. Priority:
-    /// if step-up is disabled, return <c>defaultSpeed × 0.05</c>; otherwise
-    /// clamp the logical speed (enforced uses the server value, otherwise
-    /// the runtime value) and multiply by 0.05 (VS's per-tick convention).
-    /// </summary>
-    internal static double ComputeDesiredElevateFactor(
-        bool stepUpEnabled,
-        bool isEnforced,
-        float currentElevateFactor,
-        float optionsStepSpeed,
-        float defaultSpeed,
-        float serverMinSpeed,
-        float serverMaxSpeed)
-    {
-        float logicalSpeed = isEnforced ? optionsStepSpeed : currentElevateFactor;
-        logicalSpeed = ElevateFactorMath.Clamp(logicalSpeed, isEnforced, serverMinSpeed, serverMaxSpeed);
-        return (stepUpEnabled ? logicalSpeed : defaultSpeed) * 0.05;
+            currentElevateFactor,
+            IsEnforced,
+            opts.ServerMinStepSpeed,
+            opts.ServerMaxStepSpeed));
     }
 
     /// <summary>
@@ -238,8 +194,7 @@ internal sealed class ElevateFactorController
     /// <summary>
     /// Refreshes <see cref="currentElevateFactor"/> from
     /// <c>StepUpOptions.Current.StepSpeed</c> and re-applies. Called
-    /// from <c>OnReloadConfig</c> after the file is reloaded and the
-    /// writer's cache is invalidated.
+    /// from <c>OnReloadConfig</c> after the file is reloaded.
     /// </summary>
     public void OnConfigReloaded(bool stepUpEnabled)
     {

@@ -1,6 +1,6 @@
 {
   "comment_description": "Arquivo de localização em português (Brasil) para 'StepUp Advanced'.",
-  "comment_version": "Versão do mod: v1.3.1",
+  "comment_version": "Versão do mod: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Comunidade, assistido por máquina",
   "comment_technical_details": "Uso de termos comuns de jogos em PT-BR. Nomes técnicos mantidos (StepUp, Harmony, Server API). {0} preservado. Espaços preservados.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Modo apenas velocidade ",
   "sua:height-controls-disabled": " Controles de altura desativados ",
+
+  "sua:basic-mode": " Modo básico ",
+  "sua:basic-mode-locked": " Altura e velocidade estão bloqueadas neste servidor ",
+  "sua:basic-mode-notice": " Este servidor não usa o StepUp Advanced. Apenas ligar/desligar: 1,2 bloco na velocidade normal. ",
 
   "sua:server-enforced": " Imposto pelo servidor ",
   "sua:height-change-blocked": " Alteração de altura bloqueada ",

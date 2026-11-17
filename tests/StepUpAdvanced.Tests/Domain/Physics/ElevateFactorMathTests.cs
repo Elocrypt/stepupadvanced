@@ -5,8 +5,10 @@ using Xunit;
 namespace StepUpAdvanced.Tests.Domain.Physics;
 
 /// <summary>
-/// Symmetric counterpart to <see cref="StepHeightClampTests"/>. Same shape,
-/// values shifted (0.7 floor instead of 0.6).
+/// Symmetric counterpart to <see cref="StepHeightClampTests"/> for the clamp
+/// (0.7 floor instead of 0.6), plus the priority order of
+/// <see cref="ElevateFactorMath.ResolveEffective"/>: Basic mode, then the
+/// toggle, then the clamp.
 /// </summary>
 public class ElevateFactorMathTests
 {
@@ -56,6 +58,50 @@ public class ElevateFactorMathTests
     public void Clamp_RequestedExactlyAtClientFloor_NotEnforced_ReturnsClientFloor()
     {
         ElevateFactorMath.Clamp(requested: ElevateFactorMath.ClientMin, isEnforced: false, serverMin: 0f, serverMax: 0f)
+            .Should().Be(ElevateFactorMath.ClientMin);
+    }
+
+    // ─── ResolveEffective: what the Harmony getters actually use ────────
+
+    [Theory]
+    [InlineData(true, 3.0f, true)]
+    [InlineData(false, 3.0f, false)]
+    [InlineData(true, 0.7f, false)]
+    public void ResolveEffective_Basic_AlwaysBasicSpeed(bool enabled, float requested, bool enforced)
+    {
+        ElevateFactorMath.ResolveEffective(basic: true, enabled, requested, enforced, serverMin: 1.5f, serverMax: 2.0f)
+            .Should().Be(BasicMode.StepSpeed);
+    }
+
+    [Fact]
+    public void ResolveEffective_ToggledOff_IsVanilla()
+    {
+        ElevateFactorMath.ResolveEffective(basic: false, stepUpEnabled: false, requested: 1.8f, isEnforced: true, serverMin: 1.5f, serverMax: 2.0f)
+            .Should().Be(ElevateFactorMath.Vanilla);
+    }
+
+    /// <summary>
+    /// The bug this guards: a player's file asked for more speed than the
+    /// server allows, and the getters used the raw value.
+    /// </summary>
+    [Fact]
+    public void ResolveEffective_Enforced_ClampsToServerMax()
+    {
+        ElevateFactorMath.ResolveEffective(basic: false, stepUpEnabled: true, requested: 3.0f, isEnforced: true, serverMin: 0.7f, serverMax: 1.3f)
+            .Should().Be(1.3f);
+    }
+
+    [Fact]
+    public void ResolveEffective_NotEnforced_PassesRequestedThrough()
+    {
+        ElevateFactorMath.ResolveEffective(basic: false, stepUpEnabled: true, requested: 3.0f, isEnforced: false, serverMin: 0.7f, serverMax: 1.3f)
+            .Should().Be(3.0f);
+    }
+
+    [Fact]
+    public void ResolveEffective_BelowClientFloor_ReturnsClientFloor()
+    {
+        ElevateFactorMath.ResolveEffective(basic: false, stepUpEnabled: true, requested: 0.2f, isEnforced: false, serverMin: 0f, serverMax: 0f)
             .Should().Be(ElevateFactorMath.ClientMin);
     }
 }

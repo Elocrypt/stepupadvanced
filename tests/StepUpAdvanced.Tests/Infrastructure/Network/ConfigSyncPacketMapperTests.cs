@@ -439,4 +439,78 @@ public class ConfigSyncPacketMapperTests
 
         current.BlockBlacklist.Should().BeEmpty();
     }
+
+    // ─── WithLocalServerFields: remote-server saves ─────────────────────
+
+    /// <summary>
+    /// The bug this guards: a remote server's enforcement saved into the
+    /// player's shared config file and then enforced in single-player.
+    /// Every server-owned field must come from the local file, not memory.
+    /// </summary>
+    [Fact]
+    public void WithLocalServerFields_TakesAllServerOwnedFieldsFromLocal()
+    {
+        var current = BuildEnforcementSentinels(); // what the server pushed
+        var local = new StepUpOptions
+        {
+            ServerEnforceSettings = false,
+            AllowClientChangeStepHeight = true,
+            AllowClientChangeStepSpeed = true,
+            AllowClientConfigReload = false,
+            ServerMinStepHeight = 0.6f,
+            ServerMaxStepHeight = 1.2f,
+            ServerMinStepSpeed = 0.7f,
+            ServerMaxStepSpeed = 1.3f,
+            ShowServerEnforcedNotice = true,
+            BlockBlacklist = new List<string> { "game:ladder-wood-north" },
+        };
+
+        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
+
+        ConfigSyncPacketMapper.ToPacket(result).Should().BeEquivalentTo(ConfigSyncPacketMapper.ToPacket(local));
+    }
+
+    [Fact]
+    public void WithLocalServerFields_KeepsClientOwnedFieldsFromCurrent()
+    {
+        var current = BuildEnforcementSentinels();
+        current.StepHeight = 3.3f;
+        current.StepSpeed = 1.7f;
+        current.QuietMode = true;
+        current.SprintOnlyStepUp = true;
+        var local = new StepUpOptions { StepHeight = 0.9f, StepSpeed = 0.8f };
+
+        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
+
+        result.StepHeight.Should().Be(3.3f);
+        result.StepSpeed.Should().Be(1.7f);
+        result.QuietMode.Should().BeTrue();
+        result.SprintOnlyStepUp.Should().BeTrue();
+    }
+
+    [Fact]
+    public void WithLocalServerFields_DoesNotMutateInputs()
+    {
+        var current = BuildEnforcementSentinels();
+        var local = new StepUpOptions { ServerEnforceSettings = false, BlockBlacklist = new List<string> { "a" } };
+        var currentBefore = ConfigSyncPacketMapper.ToPacket(current);
+        var currentList = current.BlockBlacklist;
+
+        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
+        result.BlockBlacklist.Add("b");
+
+        ConfigSyncPacketMapper.ToPacket(current).Should().BeEquivalentTo(currentBefore);
+        current.BlockBlacklist.Should().BeSameAs(currentList);
+        local.BlockBlacklist.Should().Equal("a");
+    }
+
+    [Fact]
+    public void WithLocalServerFields_NullLocal_UsesFreshConfigDefaults()
+    {
+        var current = BuildEnforcementSentinels();
+
+        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local: null);
+
+        ConfigSyncPacketMapper.ToPacket(result).Should().BeEquivalentTo(ConfigSyncPacketMapper.ToPacket(new StepUpOptions()));
+    }
 }

@@ -1,6 +1,6 @@
 {
   "comment_description": "Fichier de localisation français pour 'StepUp Advanced'.",
-  "comment_version": "Mod Version : v1.3.1",
+  "comment_version": "Mod Version : v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Communauté, assistance machine",
   "comment_technical_details": "Registre neutre. Termes techniques conservés (StepUp, Harmony, Server API). {0} reste un substitut. Espaces conservés.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Mode vitesse seule ",
   "sua:height-controls-disabled": " Contrôles de hauteur désactivés ",
+
+  "sua:basic-mode": " Mode de base ",
+  "sua:basic-mode-locked": " La hauteur et la vitesse sont verrouillées sur ce serveur ",
+  "sua:basic-mode-notice": " Ce serveur n'utilise pas StepUp Advanced. Activation/désactivation uniquement : 1,2 bloc à vitesse normale. ",
 
   "sua:server-enforced": " Imposé par le serveur ",
   "sua:height-change-blocked": " Modification de la hauteur bloquée ",

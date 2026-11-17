@@ -9,7 +9,7 @@
   -->
   <PropertyGroup>
     <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VintagestoryDir>
-    <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(OS)' == 'Windows_NT'">F:\VintageStory\Client_v1.22.0\Vintagestory</VintagestoryDir>
+    <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(OS)' == 'Windows_NT'">F:\VintageStory\Client_v1.22.7\Vintagestory</VintagestoryDir>
     <VintagestoryDir Condition="'$(VintagestoryDir)' == '' AND '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Vintagestory</VintagestoryDir>
   </PropertyGroup>
 

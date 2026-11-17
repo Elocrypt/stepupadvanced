@@ -1,6 +1,6 @@
 {
   "comment_description": "'StepUp Advanced' için Türkçe yerelleştirme dosyası.",
-  "comment_version": "Mod Sürümü: v1.3.1",
+  "comment_version": "Mod Sürümü: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Topluluk, makine destekli",
   "comment_technical_details": "Nötr üslup. Teknik adlar korunmuştur (StepUp, Harmony, Server API). {0} korunur. Boşluklar korunur.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Yalnızca hız modu ",
   "sua:height-controls-disabled": " Yükseklik denetimleri devre dışı ",
+
+  "sua:basic-mode": " Temel mod ",
+  "sua:basic-mode-locked": " Bu sunucuda yükseklik ve hız kilitli ",
+  "sua:basic-mode-notice": " Bu sunucuda StepUp Advanced yüklü değil. Yalnızca aç/kapat: normal hızda 1,2 blok. ",
 
   "sua:server-enforced": " Sunucu tarafından zorunlu ",
   "sua:height-change-blocked": " Yükseklik değişimi engellendi ",

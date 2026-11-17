@@ -1,6 +1,6 @@
 {
   "comment_description": "Svensk lokalisering för 'StepUp Advanced'.",
-  "comment_version": "Moddversion: v1.3.1",
+  "comment_version": "Moddversion: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, maskinassisterad",
   "comment_technical_details": "Neutral ton. Tekniska namn kvar (StepUp, Harmony, Server API). {0} bevaras. Mellanslag bevaras.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Endast hastighetsläge ",
   "sua:height-controls-disabled": " Höjdkontroller inaktiverade ",
+
+  "sua:basic-mode": " Grundläge ",
+  "sua:basic-mode-locked": " Höjd och hastighet är låsta på den här servern ",
+  "sua:basic-mode-notice": " Den här servern kör inte StepUp Advanced. Endast på/av: 1,2 block i normal hastighet. ",
 
   "sua:server-enforced": " Påtvingat av servern ",
   "sua:height-change-blocked": " Höjdändring blockerad ",

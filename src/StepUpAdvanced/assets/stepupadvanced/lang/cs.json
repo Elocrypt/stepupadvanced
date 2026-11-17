@@ -1,6 +1,6 @@
 {
   "comment_description": "Český soubor lokalizace pro 'StepUp Advanced'.",
-  "comment_version": "Verze modu: v1.3.1",
+  "comment_version": "Verze modu: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Komunita, strojově asistované",
   "comment_technical_details": "Neutrální styl. Zachovány technické názvy (StepUp, Harmony, Server API). {0} zachováno. Ponechány mezery.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Režim pouze rychlost ",
   "sua:height-controls-disabled": " Ovládání výšky zakázáno ",
+
+  "sua:basic-mode": " Základní režim ",
+  "sua:basic-mode-locked": " Výška a rychlost jsou na tomto serveru uzamčeny ",
+  "sua:basic-mode-notice": " Tento server nemá StepUp Advanced. Pouze zapnutí/vypnutí: 1,2 bloku při normální rychlosti. ",
 
   "sua:server-enforced": " Vynuceno serverem ",
   "sua:height-change-blocked": " Změna výšky zablokována ",

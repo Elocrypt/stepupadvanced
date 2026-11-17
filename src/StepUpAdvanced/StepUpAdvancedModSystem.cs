@@ -60,6 +60,18 @@ public class StepUpAdvancedModSystem : ModSystem
     // Shared across both controllers so the debounce is axis-agnostic.
     private ConfigSaveQueue? configSaveQueue;
 
+    // Last config packet from a remote server. A client reload re-reads the
+    // player's local file, which knows nothing about this server's limits,
+    // so the packet is re-applied on top. Main thread only.
+    private ConfigSyncPacket? lastServerPacket;
+
+    // How long after level finalize to wait for the server's config packet
+    // before telling the player this server doesn't run the mod. The server
+    // sends it on PlayerNowPlaying, which waits for the client to finish
+    // loading, so this leaves room for slow loads. A late packet still
+    // unlocks normally; the delay only affects the notice.
+    private const int BasicModeNoticeDelayMs = 10000;
+
     public override void Start(ICoreAPI api)
     {
         base.Start(api);
@@ -111,6 +123,10 @@ public class StepUpAdvancedModSystem : ModSystem
         base.StartClientSide(api);
         capi = api;
 
+        // Start locked; OnReceiveServerConfig unlocks once the server proves
+        // it runs the mod. Set before anything can apply step height or speed.
+        BasicModeState.Enter();
+
         configSyncChannel ??= new ConfigSyncChannel();
         configSyncChannel.RegisterClient(api, OnReceiveServerConfig);
 
@@ -123,7 +139,7 @@ public class StepUpAdvancedModSystem : ModSystem
 
         configSaveQueue = new ConfigSaveQueue(capi);
 
-        elevateController = new ElevateFactorController(capi, physicsWriter, toasts, configSaveQueue.RequestSave);
+        elevateController = new ElevateFactorController(capi, toasts, configSaveQueue.RequestSave);
         stepController = new StepHeightController(capi, worldProbe, physicsWriter, toasts, configSaveQueue.RequestSave);
 
         bool heightNormalized = stepController.InitializeFromConfig();
@@ -138,6 +154,21 @@ public class StepUpAdvancedModSystem : ModSystem
         capi.Event.RegisterGameTickListener((dt) => { stepController.ApplyForTick(); }, 50);
         elevateController.ApplyNow(stepController.IsEnabled);
         RegisterClientCommands();
+        capi.Event.LevelFinalize += ScheduleBasicModeNotice;
+    }
+
+    /// <summary>
+    /// Once the world is loaded, waits briefly for the server's config packet;
+    /// if it never came, tells the player once that this server doesn't run
+    /// the mod and only Basic mode is available.
+    /// </summary>
+    private void ScheduleBasicModeNotice()
+    {
+        capi.Event.RegisterCallback(_ =>
+        {
+            if (!BasicModeState.Active) return;
+            ChatFormatting.Client(capi, $"{ChatFormatting.Tag} {ChatFormatting.Warn(ChatFormatting.L("basic-mode"))} – {ChatFormatting.Muted(ChatFormatting.L("basic-mode-notice"))}");
+        }, BasicModeNoticeDelayMs);
     }
 
     private void RegisterHotkeys()
@@ -157,9 +188,15 @@ public class StepUpAdvancedModSystem : ModSystem
     {
         ConfigStore.LoadOrUpgrade(capi);
 
-        worldProbe?.Blacklist.MarkDirty();
+        // On a remote server, keep its enforcement in force after the reload.
+        // Not needed in single-player: the integrated server shares this file
+        // and pushes its own update when the file changes.
+        if (!capi.IsSinglePlayer && lastServerPacket != null)
+        {
+            ConfigSyncPacketMapper.Apply(StepUpOptions.Current, lastServerPacket);
+        }
 
-        physicsWriter?.InvalidateCache();
+        worldProbe?.Blacklist.MarkDirty();
 
         // Step must refresh first so IsEnabled is current when elevate queries it.
         stepController?.OnConfigReloaded();
@@ -173,6 +210,11 @@ public class StepUpAdvancedModSystem : ModSystem
 
         capi.Event.EnqueueMainThreadTask(() =>
         {
+            // Any config packet proves the server runs the mod (it sends one
+            // on every join), so leave Basic mode before re-applying below.
+            BasicModeState.Exit();
+            lastServerPacket = packet;
+
             // Merge only the enforcement fields; all client-local fields
             // (StepHeight, StepSpeed, QuietMode, probe tunables) are preserved.
             ConfigSyncPacketMapper.Apply(StepUpOptions.Current, packet);

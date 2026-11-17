@@ -26,6 +26,10 @@ public class StepUpOptions
     [ProtoMember(7), DefaultValue(1.3f)] public float StepSpeed { get; set; } = 1.3f;
 
     [ProtoMember(8), DefaultValue(0.6f)] public float DefaultHeight { get; set; } = 0.6f;
+    /// <summary>
+    /// Not used by gameplay: toggling step-up off returns rise speed to
+    /// vanilla. Kept so existing config files and the wire format are unchanged.
+    /// </summary>
     [ProtoMember(9), DefaultValue(0.7f)] public float DefaultSpeed { get; set; } = 0.7f;
 
     [ProtoMember(10), DefaultValue(0.1f)] public float StepHeightIncrement { get; set; } = 0.1f;
@@ -83,4 +87,11 @@ public class StepUpOptions
     /// </summary>
 
     public static StepUpOptions Current { get; internal set; } = new();
+
+    /// <summary>
+    /// Field-by-field copy. <see cref="BlockBlacklist"/> is shared with the
+    /// original, so callers that change it must assign a new list rather than
+    /// mutate the shared one.
+    /// </summary>
+    internal StepUpOptions ShallowCopy() => (StepUpOptions)MemberwiseClone();
 }

@@ -1,6 +1,6 @@
 {
   "comment_description": "‘StepUp Advanced’ 한국어 현지화 파일.",
-  "comment_version": "모드 버전: v1.3.1",
+  "comment_version": "모드 버전: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "커뮤니티, 기계 번역 지원",
   "comment_technical_details": "중립적 어조. 기술명 미번역(StepUp, Harmony, Server API). {0} 유지. 공백 유지.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " 속도 전용 모드 ",
   "sua:height-controls-disabled": " 높이 제어 비활성화됨 ",
+
+  "sua:basic-mode": " 기본 모드 ",
+  "sua:basic-mode-locked": " 이 서버에서는 높이와 속도가 잠겨 있습니다 ",
+  "sua:basic-mode-notice": " 이 서버에는 StepUp Advanced가 없습니다. 켜기/끄기만 가능: 일반 속도로 1.2 블록. ",
 
   "sua:server-enforced": " 서버에서 강제 ",
   "sua:height-change-blocked": " 높이 변경이 차단됨 ",

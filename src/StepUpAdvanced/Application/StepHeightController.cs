@@ -185,7 +185,13 @@ internal sealed class StepHeightController
         }
         warnedPhysNullOnce = false;
 
-        bool isEnforced = IsEnforced;
+        // Basic mode swaps every value that could raise the step height for a
+        // constant, so the config file has no say on servers without the mod.
+        HeightInputs inputs = BasicMode.ResolveHeightInputs(
+            BasicModeState.Active,
+            currentStepHeight,
+            cfg.DefaultHeight,
+            IsEnforced);
 
         // Sprint-only / disable-while-sneaking / disable-while-airborne gate
         // (height axis). Closed gate collapses the composed height to the
@@ -202,14 +208,14 @@ internal sealed class StepHeightController
             player.Entity.OnGround,
             player.Entity.Swimming);
 
-        bool nearBlacklistedBlock = IsNearBlacklistedBlock(player);
+        bool nearBlacklistedBlock = IsNearBlacklistedBlock(player, inputs.IsEnforced);
         float baseHeight = ComputeBaseStepHeight(
             stepUpEnabled,
             gateOpen,
             nearBlacklistedBlock,
-            currentStepHeight,
-            cfg.DefaultHeight,
-            isEnforced,
+            inputs.TargetHeight,
+            inputs.DefaultHeight,
+            inputs.IsEnforced,
             cfg.ServerMinStepHeight,
             cfg.ServerMaxStepHeight);
 
@@ -219,7 +225,7 @@ internal sealed class StepHeightController
         if (cfg.CeilingGuardEnabled && baseHeight > 0f)
         {
             float clearance = DistanceToCeiling(player, baseHeight);
-            finalHeight = ApplyCeilingGuard(baseHeight, clearance, cfg.DefaultHeight);
+            finalHeight = ApplyCeilingGuard(baseHeight, clearance, inputs.DefaultHeight);
         }
 
         if (writer.WriteStepHeight(physicsBehavior, finalHeight)) return;
@@ -441,12 +447,13 @@ internal sealed class StepHeightController
 
     /// <summary>
     /// Checks whether the player is near a blacklisted block. The server list
-    /// is only included when enforcement is active.
+    /// is only included when <paramref name="isEnforced"/> (the resolved
+    /// per-tick value, which Basic mode forces off).
     /// </summary>
-    private bool IsNearBlacklistedBlock(IClientPlayer player)
+    private bool IsNearBlacklistedBlock(IClientPlayer player, bool isEnforced)
     {
         // Server list is excluded when enforcement is off.
-        var serverList = IsEnforced ? StepUpOptions.Current?.BlockBlacklist : null;
+        var serverList = isEnforced ? StepUpOptions.Current?.BlockBlacklist : null;
         var clientList = BlockBlacklistOptions.Current?.BlockCodes;
 
         return probe.NearBlacklistedBlock(

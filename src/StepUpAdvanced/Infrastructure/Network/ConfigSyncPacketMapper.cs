@@ -52,4 +52,28 @@ internal static class ConfigSyncPacketMapper
         current.ShowServerEnforcedNotice = packet.ShowServerEnforcedNotice;
         current.BlockBlacklist = packet.BlockBlacklist ?? new List<string>();
     }
+
+    /// <summary>
+    /// Returns a copy of <paramref name="current"/> whose server-owned fields
+    /// (the ten fields <see cref="Apply"/> writes) are taken from
+    /// <paramref name="local"/> instead. Used when saving on a remote server,
+    /// where <paramref name="current"/> holds that server's pushed values and
+    /// <paramref name="local"/> is the player's own file on disk.
+    /// </summary>
+    /// <remarks>
+    /// Defined here so the server-owned field set has one source of truth:
+    /// a field added to the packet is automatically kept out of the player's
+    /// local file. Neither input is mutated. A missing local file
+    /// (<c>null</c>) falls back to the defaults a fresh config would have.
+    /// </remarks>
+    public static StepUpOptions WithLocalServerFields(StepUpOptions current, StepUpOptions? local)
+    {
+        var result = current.ShallowCopy();
+        Apply(result, ToPacket(local ?? new StepUpOptions()));
+
+        // Apply hands over the local object's list instance; copy it so the
+        // result never aliases another options object.
+        result.BlockBlacklist = new List<string>(result.BlockBlacklist);
+        return result;
+    }
 }

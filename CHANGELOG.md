@@ -5,6 +5,46 @@ All notable changes to StepUp Advanced will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026/11/17
+
+### Added
+
+- **Basic mode on servers without StepUp Advanced.** The mod no longer shuts
+  itself off when you join a server that doesn't have it. Instead it runs in
+  Basic mode: auto step-up with a fixed 1.2-block height at normal speed, and
+  the toggle key to turn it on or off. Height and speed can't be changed there,
+  by hotkey or by editing the config, so servers that never opted in can't be
+  given more than that. Sprint-only, sneak, airborne, Ceiling Guard, and your
+  client blacklist still apply. On servers that run the mod, nothing changes.
+
+### Fixed
+
+- **Keybind names in the Controls menu.** The six StepUp Advanced keybinds
+  showed raw text like `key.toggle` instead of their names. They now read
+  "StepUp Advanced: Toggle Step Up", "StepUp Advanced: Increase Step Height",
+  and so on, so they're easy to pick out among other mods' keybinds.
+- **A server's enforcement followed you into single-player.** After playing on
+  a server with enforcement on, changing your height or speed there saved the
+  server's limits and enforcement setting into your own config file, which
+  single-player also uses. Your worlds then enforced that server's limits on
+  you. Only your own settings are saved while on a server now. If this already
+  happened to you, set `ServerEnforceSettings` (and the `ServerMin`/`ServerMax`
+  limits, if they changed) back to what you want in
+  `ModConfig/StepUpAdvancedConfig.json`.
+- **Reloading config on a server could lift its limits.** On servers that allow
+  client reloads, pressing Reload Config swapped the server's limits for your
+  local ones until the server next synced. The server's limits now stay in
+  force after a reload.
+- **Server speed limits weren't applied to step speed.** Rise speed used the
+  speed from your own config file even when a server enforced lower limits,
+  until you pressed a speed key. The server's speed limits now apply as soon
+  as you join.
+- **Toggling step-up off didn't reset step speed.** With step-up off, you still
+  rose at your configured speed. Turning it off now returns rise speed to
+  vanilla, matching step height. The `DefaultSpeed` setting is no longer used.
+- Removed the misleading "Failed to resolve elevateFactor field" warning from
+  the log. It came from leftover code that never affected step speed.
+
 ## [1.4.0] - 2026/06/09
 
 ### Added
@@ -225,7 +265,7 @@ fixes from that release.
 
 - Ceiling guard & forward probe not properly detecting ledges.
 
-[Unreleased]: https://github.com/Elocrypt/stepupadvanced/compare/v1.4.0...HEAD
+[1.5.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.2.4...v1.3.0
 [1.2.4]: https://github.com/Elocrypt/stepupadvanced/compare/v1.2.3...v1.2.4

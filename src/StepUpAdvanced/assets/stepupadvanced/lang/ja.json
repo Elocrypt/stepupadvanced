@@ -1,6 +1,6 @@
 {
   "comment_description": "『StepUp Advanced』日本語ローカライズファイル。",
-  "comment_version": "Mod バージョン: v1.3.1",
+  "comment_version": "Mod バージョン: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "コミュニティ、機械翻訳支援",
   "comment_technical_details": "丁寧すぎない中立的な文体。技術名は英語のまま（StepUp, Harmony, Server API）。{0} はそのまま使用。前後の空白は原文を維持。",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " スピードのみモード ",
   "sua:height-controls-disabled": " 高さの操作は無効 ",
+
+  "sua:basic-mode": " 基本モード ",
+  "sua:basic-mode-locked": " このサーバーでは高さと速度はロックされています ",
+  "sua:basic-mode-notice": " このサーバーには StepUp Advanced が導入されていません。オン/オフ切り替えのみ：通常速度で 1.2 ブロック。 ",
 
   "sua:server-enforced": " サーバーによる強制 ",
   "sua:height-change-blocked": " 高さの変更はブロックされています ",

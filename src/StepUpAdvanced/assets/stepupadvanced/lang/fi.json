@@ -1,6 +1,6 @@
 {
   "comment_description": "Suomenkielinen lokalisointitiedosto modille 'StepUp Advanced'.",
-  "comment_version": "Modin versio: v1.3.1",
+  "comment_version": "Modin versio: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Yhteisö, koneavusteinen",
   "comment_technical_details": "Neutraali tyyli. Tekniset nimet säilytetty (StepUp, Harmony, Server API). {0} säilytetty. Välilyönnit säilytetty.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Vain nopeus -tila ",
   "sua:height-controls-disabled": " Korkeuden säätö pois käytöstä ",
+
+  "sua:basic-mode": " Perustila ",
+  "sua:basic-mode-locked": " Korkeus ja nopeus on lukittu tällä palvelimella ",
+  "sua:basic-mode-notice": " Tällä palvelimella ei ole StepUp Advancedia. Vain päälle/pois: 1,2 lohkoa normaalilla nopeudella. ",
 
   "sua:server-enforced": " Palvelimen pakottama ",
   "sua:height-change-blocked": " Korkeuden muutos estetty ",

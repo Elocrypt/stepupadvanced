@@ -1,6 +1,6 @@
 {
   "comment_description": "English localization file for 'StepUp Advanced'.",
-  "comment_version": "Mod Version: v1.3.1",
+  "comment_version": "Mod Version: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "",
   "comment_technical_details": "",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Speed-only mode ",
   "sua:height-controls-disabled": " Height controls disabled ",
+
+  "sua:basic-mode": " Basic mode ",
+  "sua:basic-mode-locked": " Height and speed are locked on this server ",
+  "sua:basic-mode-notice": " This server doesn't run StepUp Advanced. Toggle only: 1.2 blocks at normal speed. ",
 
   "sua:server-enforced": " Server enforced ",
   "sua:height-change-blocked": " Height change blocked ",

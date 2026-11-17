@@ -1,6 +1,6 @@
 {
   "comment_description": "Nederlandse vertaalbestand voor 'StepUp Advanced'.",
-  "comment_version": "Mod Versie: v1.3.1",
+  "comment_version": "Mod Versie: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "Community, machine-assisted",
   "comment_technical_details": "Neutrale toon. Technische namen (StepUp, Harmony, Server API) ongewijzigd. {0} behouden. Spaties uit het origineel behouden.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " Alleen-snelheidmodus ",
   "sua:height-controls-disabled": " Hoogtebediening uitgeschakeld ",
+
+  "sua:basic-mode": " Basismodus ",
+  "sua:basic-mode-locked": " Hoogte en snelheid zijn vergrendeld op deze server ",
+  "sua:basic-mode-notice": " Deze server draait geen StepUp Advanced. Alleen aan/uit: 1,2 blokken op normale snelheid. ",
 
   "sua:server-enforced": " Door server afgedwongen ",
   "sua:height-change-blocked": " Hoogtewijziging geblokkeerd ",

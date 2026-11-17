@@ -1,6 +1,6 @@
 {
   "comment_description": "ملف تعريب اللغة العربية لـ 'StepUp Advanced'.",
-  "comment_version": "إصدار المعدّل: v1.3.1",
+  "comment_version": "إصدار المعدّل: v1.5.0",
   "comment_author": "Elocrypt",
   "comment_contributors": "المجتمع، بمساعدة آلية",
   "comment_technical_details": "لغة محايدة. الأسماء التقنية تبقى كما هي (StepUp, Harmony, Server API). تم الحفاظ على {0} والمسافات.",
@@ -16,6 +16,10 @@
 
   "sua:speed-only-mode": " وضع السرعة فقط ",
   "sua:height-controls-disabled": " عناصر التحكم في الارتفاع معطّلة ",
+
+  "sua:basic-mode": " الوضع الأساسي ",
+  "sua:basic-mode-locked": " الارتفاع والسرعة مقفلان على هذا الخادم ",
+  "sua:basic-mode-notice": " هذا الخادم لا يشغّل StepUp Advanced. التبديل فقط: 1.2 كتلة بالسرعة العادية. ",
 
   "sua:server-enforced": " مفروض من الخادم ",
   "sua:height-change-blocked": " تغيير الارتفاع محجوب ",

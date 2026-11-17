@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using StepUpAdvanced.Configuration;
+using StepUpAdvanced.Core;
 using Vintagestory.GameContent;
 
 namespace StepUpAdvanced;
 
 /// <summary>
-/// Scales the vanilla step-up "elevate" speed by the configured StepSpeed by
+/// Scales the vanilla step-up "elevate" speed by the effective step speed by
 /// rewriting the three elevate constants in
 /// <see cref="EntityBehaviorPlayerPhysics.TryStepSmooth"/>.
 /// </summary>
@@ -20,7 +20,8 @@ namespace StepUpAdvanced;
 /// All three values load as <c>ldc.r8</c> and feed one <c>stloc</c> (the
 /// <c>elevateFactor</c> local). The transpiler swaps each constant for a call
 /// to the matching <c>Get*ElevateD</c> getter, which multiplies the base
-/// factor by <c>StepUpOptions.Current.StepSpeed</c>.
+/// factor by <see cref="StepSpeedState.Effective"/>: the speed after Basic
+/// mode, the step-up toggle, and enforced server caps are applied.
 ///
 /// <para>
 /// Matching is an ANCHORED TRIPLE-WINDOW, not a value-only scan. A bare
@@ -50,9 +51,11 @@ public static class EntityBehaviorPlayerPhysicsPatch
     private const double DefaultFactor = 0.05;
     private const double SprintFactor = 0.10;
 
-    public static double GetSneakElevateD() => StepUpOptions.Current.StepSpeed * SneakFactor;
-    public static double GetDefaultElevateD() => StepUpOptions.Current.StepSpeed * DefaultFactor;
-    public static double GetSprintElevateD() => StepUpOptions.Current.StepSpeed * SprintFactor;
+    // Physics hot path: one volatile read, no rules here. The value is
+    // resolved and published by ElevateFactorController when inputs change.
+    public static double GetSneakElevateD() => StepSpeedState.Effective * SneakFactor;
+    public static double GetDefaultElevateD() => StepSpeedState.Effective * DefaultFactor;
+    public static double GetSprintElevateD() => StepSpeedState.Effective * SprintFactor;
 
     private static bool Approx(double a, double b) => Math.Abs(a - b) < 1e-8;
 
