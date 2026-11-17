@@ -14,7 +14,7 @@ Step height · step speed · ceiling awareness · block blacklist · server-enfo
 
 ---
 
-> Builds on CopyGirl's original [StepUp](https://mods.vintagestory.at/stepup) with full configurability, live hotkeys, ceiling awareness, and multiplayer-friendly server enforcement. Install it client-side for personal use, or on the server to enforce shared limits.
+> Builds on CopyGirl's original [StepUp](https://mods.vintagestory.at/stepup) with full configurability, live hotkeys, ceiling awareness, and multiplayer-friendly server enforcement. Install it on the server for full configurability and shared limits. On servers without it, you still get basic auto step-up.
 
 ## Features
 
@@ -23,10 +23,10 @@ Step height · step speed · ceiling awareness · block blacklist · server-enfo
 <td width="50%" valign="top">
 
 ### Step control
-- **Configurable step height** from 0.2 to 2 blocks
-- **Configurable step speed** from 0.5x to 2x
+- **Configurable step height** from vanilla (0.6 blocks) up
+- **Configurable step speed** from 0.7x up (1.0x is vanilla)
 - **Live adjustments** — raise or lower height and speed on the fly with hotkeys
-- **Dynamic toggle** — turn step-up on or off instantly
+- **Dynamic toggle** — turn step-up on or off instantly; off means vanilla height and speed
 - **Reloadable config** — apply edits mid-game without restarting
 
 ### Movement options
@@ -49,6 +49,7 @@ Step height · step speed · ceiling awareness · block blacklist · server-enfo
 - Server config is **pushed to clients on join**
 - Client hotkeys for height/speed are disabled where not permitted by the server
 - Out-of-bounds server values are validated and corrected automatically
+- **Basic mode** on servers without the mod: toggleable 1.2-block step-up at vanilla speed, with nothing adjustable
 
 ### Compatibility
 - **Speed-Only Mode** — let another mod own step height (e.g. XSkills Steeplechaser) while StepUp Advanced manages speed
@@ -67,11 +68,13 @@ Step height · step speed · ceiling awareness · block blacklist · server-enfo
    - **macOS:** `~/Library/Application Support/VintagestoryData/Mods`
 3. Launch Vintage Story.
 
-Works client-side on its own. For server-enforced limits and a shared server blacklist, install it on the server too — clients then receive the enforced configuration when they join.
+Install it on the server and on each client for the full feature set. Clients then receive the server's configuration when they join.
+
+On a server that doesn't have the mod, it runs in **Basic mode**: step-up up to 1.2 blocks at vanilla speed, which you can toggle on and off. Height and speed can't be changed there, by hotkey or config file. That way it never gives more than that on a server whose owner hasn't installed it. In single-player you get everything.
 
 ## Using it
 
-**Keybinds** (rebindable in the game's control settings):
+**Keybinds** (rebindable in the game's control settings, listed as "StepUp Advanced: …"):
 
 | Key | Action |
 | --- | --- |
@@ -92,7 +95,7 @@ Works client-side on its own. For server-enforced limits and a shared server bla
 
 Server operators use the same commands with a slash — `/sua add`, `/sua remove`, `/sua remove all`, `/sua reload` — to manage the server-side blacklist and reload the server config. The server list is enforced globally; your client list stays local and is never touched by server admin actions.
 
-Settings live in `ModConfig/StepUpAdvancedConfig.json` under your Vintage Story data folder. Edit it and press <kbd>Home</kbd> to reload, or use the hotkeys for live adjustments.
+Settings live in `ModConfig/StepUpAdvancedConfig.json` under your Vintage Story data folder. Edit it and press <kbd>Home</kbd> to reload, or use the hotkeys for live adjustments. On a server, its limits still apply after a reload, and its settings are never saved into your file.
 
 ## Server enforcement
 
@@ -100,15 +103,16 @@ Settings live in `ModConfig/StepUpAdvancedConfig.json` under your Vintage Story 
 
 - Clients receive the server-defined configuration on join.
 - Hotkeys for height/speed changes are disabled where not permitted.
-- All client changes are clamped between the server's min/max limits.
+- Step height and speed are clamped between the server's min/max limits as soon as you join, whatever your own config says.
 - Server-configured limits are validated and corrected if out of bounds.
+- The server's settings only apply while you're connected; they're never written to your local config.
 
 ## Compatibility
 
 Latest version is compatible with older and current versions of Vintage Story! (not tested below version 1.19.8)
 
 - Targets **Vintage Story 1.22.0** on .NET 10.
-- Client **and** server-side. For server enforcement to apply, the mod must be present on the server.
+- Client **and** server-side. For server enforcement and the full feature set, the mod must be present on the server; without it, clients run in Basic mode.
 - **Speed-Only Mode** is provided for coexistence with mods that manage step height themselves, such as XSkills' Steeplechaser perk — set `SpeedOnlyMode = true` and StepUp Advanced manages only step speed.
 
 ## Languages
@@ -148,7 +152,7 @@ Close Vintage Story before building — a running client locks the PDBs.
 ./build/package.ps1 -Configuration Release -Version <version>
 ```
 
-Produces a mod-portal-ready zip. CI builds and tests when `VINTAGE_STORY_PATH` is configured on the runner; tagged `v*.*.*` pushes publish a release automatically.
+Produces a mod-portal-ready zip. CI builds and tests when `VINTAGE_STORY_PATH` points at a Vintage Story install the runner can reach. Pushing a `v*.*.*` tag publishes a GitHub release with notes from the matching CHANGELOG section; attach the packaged zip to it by hand.
 
 ### Architecture
 
