@@ -8,7 +8,7 @@ Step height · step speed · ceiling awareness · block blacklist · server-enfo
 
 [![Release](https://img.shields.io/github/v/release/Elocrypt/stepupadvanced?include_prereleases)](https://github.com/Elocrypt/stepupadvanced/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![VS 1.22.0](https://img.shields.io/badge/Vintage%20Story-1.22.0-purple)](https://www.vintagestory.at/)
+[![VS 1.22.7](https://img.shields.io/badge/Vintage%20Story-1.22.0-purple)](https://www.vintagestory.at/)
 
 </div>
 
