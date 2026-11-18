@@ -93,4 +93,24 @@ public class EnforcementStateTests
         EnforcementState.IsEnforced(EnumAppSide.Client, isSinglePlayer: true, cfg)
             .Should().BeTrue();
     }
+
+    // ─── Client reload gate (Reload hotkey + client file watcher) ───────
+
+    [Theory]
+    [InlineData(false, true, false, true)]   // running mod, enforcing, reload not allowed → blocked
+    [InlineData(false, true, true, false)]   // reload allowed → not blocked
+    [InlineData(false, false, false, false)] // not enforcing → not blocked
+    [InlineData(true, true, false, false)]   // Basic mode: server fields are defaults → not blocked
+    public void IsClientReloadBlocked_FollowsServerRules(bool basic, bool enforce, bool allowReload, bool expected)
+    {
+        var cfg = new StepUpOptions { ServerEnforceSettings = enforce, AllowClientConfigReload = allowReload };
+
+        EnforcementState.IsClientReloadBlocked(basic, cfg).Should().Be(expected);
+    }
+
+    [Fact]
+    public void IsClientReloadBlocked_NullConfig_NotBlocked()
+    {
+        EnforcementState.IsClientReloadBlocked(basicModeActive: false, config: null).Should().BeFalse();
+    }
 }

@@ -1,388 +1,230 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using StepUpAdvanced.Configuration.Migrations;
 using StepUpAdvanced.Core;
-using StepUpAdvanced.Domain.Physics;
-using StepUpAdvanced.Infrastructure.Network;
-using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.MathTools;
-using Vintagestory.API.Server;
 
 namespace StepUpAdvanced.Configuration;
 
 /// <summary>
-/// Static facade for loading, saving, and migrating <see cref="StepUpOptions"/>.
+/// Loads and saves the two config files and keeps
+/// <see cref="StepUpOptions.Current"/> (the merged runtime view) in sync with them.
 /// </summary>
-
+/// <remarks>
+/// <para>
+/// Each side owns one file and never touches the other:
+/// the server side (dedicated, or integrated in single-player) reads and
+/// writes <see cref="ServerFileName"/>; the client side reads and writes
+/// <see cref="ClientFileName"/>. Loading writes only that side's fields onto
+/// <see cref="StepUpOptions.Current"/>, in place. In single-player both sides
+/// share that one object, so neither side's load or save can overwrite the
+/// other's settings, and a remote server's enforcement can never end up in
+/// the player's own files.
+/// </para>
+/// <para>
+/// Before 1.6.0 everything lived in <see cref="LegacyFileName"/>. When a
+/// side's new file is missing, it is seeded from the legacy file (after the
+/// legacy migrations run) or from defaults. The legacy file is left untouched:
+/// each side migrates on its own schedule (a dedicated server never runs the
+/// client side and vice versa), so neither can know when it's safe to remove.
+/// </para>
+/// </remarks>
 internal static class ConfigStore
 {
     /// <summary>
-    /// Latest config schema version. Incremented when a load-time migration
-    /// is required for older configs.
+    /// Latest schema of the pre-1.6.0 single file. Still used to migrate a
+    /// legacy file before it seeds the new ones; never written again.
     /// </summary>
     public const int LatestSchema = 4;
 
-    /// <summary>
-    /// On-disk JSON file name. Must remain <c>StepUpAdvancedConfig.json</c> —
-    /// changing it would orphan every existing user's saved config.
-    /// </summary>
-    private const string FileName = "StepUpAdvancedConfig.json";
+    /// <summary>Schema of <see cref="ServerFileName"/>.</summary>
+    public const int ServerSchema = 1;
+
+    /// <summary>Schema of <see cref="ClientFileName"/>.</summary>
+    public const int ClientSchema = 1;
+
+    /// <summary>Server-owned settings. Must keep this name once released.</summary>
+    public const string ServerFileName = "StepUpAdvanced_Server.json";
+
+    /// <summary>Player-owned settings. Must keep this name once released.</summary>
+    public const string ClientFileName = "StepUpAdvanced_Client.json";
+
+    /// <summary>The pre-1.6.0 shared file. Read once per side to seed the new files; never written.</summary>
+    public const string LegacyFileName = "StepUpAdvancedConfig.json";
+
+    // One lock per file. In single-player the client and server threads save
+    // different files, so they never need to wait on each other.
+    private static readonly object serverSaveLock = new();
+    private static readonly object clientSaveLock = new();
 
     /// <summary>
-    /// Cross-process mutex name. Multiple VS processes (e.g. dev workflows
-    /// with both a server and a client running) need to coordinate writes.
-    /// </summary>
-    private const string GlobalMutexName = "Global\\VS-StepUpAdvanced-Config";
-
-    /// <summary>
-    /// In-process write lock. Held for the duration of a save.
-    /// </summary>
-    private static readonly object _saveLock = new();
-
-
-    /// <summary>Hard ceiling for server-cap properties; protects against pathological config values.</summary>
-    private const float ServerCapMinHeight = 0.6f;
-
-    private const float ServerCapMaxHeight = 20f;
-    private const float ServerCapMinSpeed = 0.7f;
-    private const float ServerCapMaxSpeed = 20f;
-
-    /// <summary>
-    /// Loads the config from disk, runs schema migrations and runtime
-    /// invariant checks (clamping out-of-range values), and writes back to
-    /// disk if anything changed. Idempotent across calls — running
-    /// <c>LoadOrUpgrade</c> twice with no external file changes yields the
-    /// same on-disk state.
+    /// Loads this side's file (seeding it on first run), validates it, writes
+    /// it back if anything was corrected, and applies it onto
+    /// <see cref="StepUpOptions.Current"/>. Idempotent.
     /// </summary>
     public static void LoadOrUpgrade(ICoreAPI api)
     {
-        api.GetOrCreateDataPath("ModConfig");
+        if (api.Side == EnumAppSide.Server) LoadServer(api);
+        else LoadClient(api);
+    }
 
-        var loadedConfig = api.LoadModConfig<StepUpOptions>(FileName);
-        bool created = false;
-
-        if (loadedConfig == null)
+    /// <summary>Writes this side's fields of <see cref="StepUpOptions.Current"/> to this side's file.</summary>
+    public static void Save(ICoreAPI api)
+    {
+        if (api.Side == EnumAppSide.Server)
         {
-            StepUpOptions.Current = new StepUpOptions { SchemaVersion = LatestSchema };
-            created = true;
-            Save(api);
-            ModLog.Event(api, "Created new config (schema v{0}).", LatestSchema);
-            return;
+            Store(api, ConfigSplit.ToServer(StepUpOptions.Current), ServerFileName, serverSaveLock);
         }
         else
         {
-            StepUpOptions.Current = loadedConfig;
+            Store(api, ConfigSplit.ToClient(StepUpOptions.Current), ClientFileName, clientSaveLock);
         }
-
-        bool changed = MergeAndMigrate(api, loadedConfig, out var merged);
-        StepUpOptions.Current = merged;
-
-        if (Normalize(api, StepUpOptions.Current)) changed = true;
-
-        if (changed)
-        {
-            Save(api);
-            ModLog.Event(api, "Auto-upgraded config to schema v{0}.", StepUpOptions.Current.SchemaVersion);
-        }
-
-        bool dirty = created;
-
-        dirty |= NormalizeCaps(api);
-
-        if (StepUpOptions.Current.StepHeightIncrement < 0.1f)
-        {
-            ModLog.Warning(api, "StepHeightIncrement in config is below minimum allowed value (0.1). Adjusting to minimum.");
-            StepUpOptions.Current.StepHeightIncrement = 0.1f; dirty = true;
-        }
-        if (StepUpOptions.Current.StepSpeedIncrement < 0.1f)
-        {
-            ModLog.Warning(api, "StepSpeedIncrement in config is below minimum allowed value (0.1). Adjusting to minimum.");
-            StepUpOptions.Current.StepSpeedIncrement = 0.1f; dirty = true;
-        }
-
-        if (StepUpOptions.Current.DefaultHeight < StepUpOptions.Current.ServerMinStepHeight || StepUpOptions.Current.DefaultHeight > StepUpOptions.Current.ServerMaxStepHeight)
-        {
-            ModLog.Warning(api,
-                $"DefaultHeight in config is out of bounds (allowed range: {StepUpOptions.Current.ServerMinStepHeight} - {StepUpOptions.Current.ServerMaxStepHeight}). Resetting to min ({StepUpOptions.Current.ServerMinStepHeight}).");
-            StepUpOptions.Current.DefaultHeight = StepUpOptions.Current.ServerMinStepHeight; dirty = true;
-        }
-        if (StepUpOptions.Current.DefaultSpeed < StepUpOptions.Current.ServerMinStepSpeed || StepUpOptions.Current.DefaultSpeed > StepUpOptions.Current.ServerMaxStepSpeed)
-        {
-            ModLog.Warning(api,
-                $"DefaultSpeed in config is out of bounds (allowed range: {StepUpOptions.Current.ServerMinStepSpeed} - {StepUpOptions.Current.ServerMaxStepSpeed}). Resetting to min ({StepUpOptions.Current.ServerMinStepSpeed}).");
-            StepUpOptions.Current.DefaultSpeed = StepUpOptions.Current.ServerMinStepSpeed; dirty = true;
-        }
-
-        bool enforceCaps = IsEnforcedForThisSide();
-
-        float stepHeight = StepUpOptions.Current.StepHeight;
-        if (stepHeight < StepHeightClamp.ClientMin)
-        {
-            ModLog.Warning(api, $"StepHeight below minimum ({StepHeightClamp.ClientMin}). Adjusting to {StepHeightClamp.ClientMin}.");
-            stepHeight = StepHeightClamp.ClientMin; dirty = true;
-        }
-        if (enforceCaps)
-        {
-            float clamped = GameMath.Clamp(stepHeight, StepUpOptions.Current.ServerMinStepHeight, StepUpOptions.Current.ServerMaxStepHeight);
-            if (clamped != stepHeight)
-            {
-                ModLog.Warning(api, $"StepHeight outside enforced server range ({StepUpOptions.Current.ServerMinStepHeight}..{StepUpOptions.Current.ServerMaxStepHeight}). Adjusting.");
-                stepHeight = clamped; dirty = true;
-            }
-        }
-        if (stepHeight != StepUpOptions.Current.StepHeight) StepUpOptions.Current.StepHeight = stepHeight;
-        ModLog.Verbose(api, $"Config Loaded: StepHeight = {StepUpOptions.Current.StepHeight}");
-
-        float stepSpeed = StepUpOptions.Current.StepSpeed;
-        if (stepSpeed < ElevateFactorMath.ClientMin)
-        {
-            ModLog.Warning(api, $"StepSpeed below minimum ({ElevateFactorMath.ClientMin}). Adjusting to {ElevateFactorMath.ClientMin}.");
-            stepSpeed = ElevateFactorMath.ClientMin; dirty = true;
-        }
-        if (enforceCaps)
-        {
-            float clamped = GameMath.Clamp(stepSpeed, StepUpOptions.Current.ServerMinStepSpeed, StepUpOptions.Current.ServerMaxStepSpeed);
-            if (clamped != stepSpeed)
-            {
-                ModLog.Warning(api, $"StepSpeed outside enforced server range ({StepUpOptions.Current.ServerMinStepSpeed}..{StepUpOptions.Current.ServerMaxStepSpeed}). Adjusting.");
-                stepSpeed = clamped; dirty = true;
-            }
-        }
-        if (stepSpeed != StepUpOptions.Current.StepSpeed) StepUpOptions.Current.StepSpeed = stepSpeed;
-        ModLog.Verbose(api, $"Config Loaded: StepSpeed = {StepUpOptions.Current.StepSpeed}");
-
-        // ServerEnforceSettings is honored verbatim — single-player players
-        // are also the server admin and may opt in to enforcing caps on themselves.
-
-        int fwdOld = StepUpOptions.Current.ForwardProbeDistance;
-        StepUpOptions.Current.ForwardProbeDistance = GameMath.Clamp(StepUpOptions.Current.ForwardProbeDistance, 0, 4);
-        if (StepUpOptions.Current.ForwardProbeDistance != fwdOld)
-        {
-            ModLog.Verbose(api, $"Normalized ForwardProbeDistance to {StepUpOptions.Current.ForwardProbeDistance}");
-            dirty = true;
-        }
-
-        StepUpOptions.Current.ForwardProbeSpan = GameMath.Clamp(StepUpOptions.Current.ForwardProbeSpan, 0, 2);
-        StepUpOptions.Current.CeilingHeadroomPad = GameMath.Clamp(StepUpOptions.Current.CeilingHeadroomPad, 0f, 0.4f);
-
-        ModLog.Verbose(api,
-            $"Flags: " +
-            $"SpeedOnly={(StepUpOptions.Current.SpeedOnlyMode ? "on" : "off")}, " +
-            $"HarmonyTweaks={(StepUpOptions.Current.EnableHarmonyTweaks ? "on" : "off")}, " +
-            $"CeilingGuard={(StepUpOptions.Current.CeilingGuardEnabled ? "on" : "off")}, " +
-            $"ForwardProbe={(StepUpOptions.Current.ForwardProbeCeiling ? "on" : "off")} (dist={StepUpOptions.Current.ForwardProbeDistance})"
-        );
-
-        if (dirty) Save(api);
     }
 
-    /// <summary>
-    /// Reflectively merges the loaded config into a fresh defaults instance,
-    /// then runs schema-version-specific migrations on the result.
-    /// </summary>
-    private static bool MergeAndMigrate(ICoreAPI api, StepUpOptions loaded, out StepUpOptions merged)
+    private static void LoadServer(ICoreAPI api)
     {
-        bool changed = false;
+        api.GetOrCreateDataPath("ModConfig");
 
-        var def = new StepUpOptions();
-
-        foreach (var p in typeof(StepUpOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        if (!TryLoad(api, ServerFileName, out StepUpServerOptions? loaded))
         {
-            if (!p.CanRead || !p.CanWrite) continue;
-            var val = p.GetValue(loaded);
-
-            if (p.PropertyType == typeof(List<string>))
-            {
-                if (val == null)
-                {
-                    changed = true;
-                    continue;
-                }
-            }
-
-            p.SetValue(def, val);
+            // Unreadable file: run on defaults but don't overwrite it, so the
+            // admin can fix the typo instead of losing their settings.
+            ConfigSplit.ApplyServer(StepUpOptions.Current, new StepUpServerOptions());
+            return;
         }
 
-        int from = Math.Max(0, loaded.SchemaVersion);
-
-        changed |= MigrationRunner.Run(def, from);
-
-        if (def.SchemaVersion != LatestSchema) { def.SchemaVersion = LatestSchema; changed = true; }
-
-        merged = def;
-        return changed;
-    }
-
-    /// <summary>
-    /// Runtime invariant enforcement that runs every load. Differs from
-    /// <see cref="MergeAndMigrate"/> in that it's not version-gated — it always
-    /// runs and re-establishes invariants regardless of where the config
-    /// came from.
-    /// </summary>
-    private static bool Normalize(ICoreAPI api, StepUpOptions cfg)
-    {
         bool dirty = false;
-
-        // Defensive null-guard for the BlockBlacklist collection. The default
-        // constructor initializes a fresh list and MergeAndMigrate preserves
-        // non-null lists from disk, so this is normally a no-op — but kept
-        // defensive null-guard kept as a safety net.
-        if (cfg.BlockBlacklist == null)
+        StepUpServerOptions server;
+        if (loaded == null)
         {
-            cfg.BlockBlacklist = new List<string>();
+            StepUpOptions? legacy = LoadLegacy(api);
+            server = legacy != null ? ConfigSplit.ToServer(legacy) : new StepUpServerOptions();
             dirty = true;
+            ModLog.Event(api, legacy != null
+                ? $"Created {ServerFileName} from your existing {LegacyFileName}. The old file is no longer used and can be deleted."
+                : $"Created {ServerFileName} with default settings.");
+        }
+        else
+        {
+            server = loaded;
         }
 
-        float oldMinH = cfg.ServerMinStepHeight, oldMaxH = cfg.ServerMaxStepHeight;
-        float oldMinS = cfg.ServerMinStepSpeed, oldMaxS = cfg.ServerMaxStepSpeed;
+        var messages = new List<string>();
+        dirty |= ConfigNormalizer.NormalizeServer(server, messages);
+        foreach (string m in messages) ModLog.Warning(api, m);
 
-        if (oldMinH <= 0f) { cfg.ServerMinStepHeight = 0.6f; dirty = true; }
-        if (oldMaxH <= 0f) { cfg.ServerMaxStepHeight = 1.2f; dirty = true; }
-        if (oldMinS <= 0f) { cfg.ServerMinStepSpeed = 0.7f; dirty = true; }
-        if (oldMaxS <= 0f) { cfg.ServerMaxStepSpeed = 1.3f; dirty = true; }
+        if (server.SchemaVersion != ServerSchema) { server.SchemaVersion = ServerSchema; dirty = true; }
 
-        if (cfg.ServerMinStepHeight > cfg.ServerMaxStepHeight)
+        ConfigSplit.ApplyServer(StepUpOptions.Current, server);
+        if (dirty) Store(api, server, ServerFileName, serverSaveLock);
+    }
+
+    private static void LoadClient(ICoreAPI api)
+    {
+        api.GetOrCreateDataPath("ModConfig");
+
+        if (!TryLoad(api, ClientFileName, out StepUpClientOptions? loaded))
         {
-            (cfg.ServerMinStepHeight, cfg.ServerMaxStepHeight) = (cfg.ServerMaxStepHeight, cfg.ServerMinStepHeight);
-            dirty = true;
+            ConfigSplit.ApplyClient(StepUpOptions.Current, new StepUpClientOptions());
+            return;
         }
-        if (cfg.ServerMinStepSpeed > cfg.ServerMaxStepSpeed)
+
+        bool dirty = false;
+        StepUpClientOptions client;
+        if (loaded == null)
         {
-            (cfg.ServerMinStepSpeed, cfg.ServerMaxStepSpeed) = (cfg.ServerMaxStepSpeed, cfg.ServerMinStepSpeed);
+            StepUpOptions? legacy = LoadLegacy(api);
+            client = legacy != null ? ConfigSplit.ToClient(legacy) : new StepUpClientOptions();
             dirty = true;
+            ModLog.Event(api, legacy != null
+                ? $"Created {ClientFileName} from your existing {LegacyFileName}. The old file is no longer used and can be deleted."
+                : $"Created {ClientFileName} with default settings.");
+        }
+        else
+        {
+            client = loaded;
         }
 
-        if (cfg.ForwardProbeSpan < 1) { cfg.ForwardProbeSpan = 1; dirty = true; }
-        if (cfg.ForwardProbeDistance < 1) { cfg.ForwardProbeDistance = 1; dirty = true; }
+        var messages = new List<string>();
+        dirty |= ConfigNormalizer.NormalizeClient(client, messages);
+        foreach (string m in messages) ModLog.Warning(api, m);
 
-        return dirty;
+        if (client.SchemaVersion != ClientSchema) { client.SchemaVersion = ClientSchema; dirty = true; }
+
+        ConfigSplit.ApplyClient(StepUpOptions.Current, client);
+        if (dirty) Store(api, client, ClientFileName, clientSaveLock);
+
+        var o = StepUpOptions.Current;
+        ModLog.Verbose(api,
+            $"Config loaded: StepHeight={o.StepHeight}, StepSpeed={o.StepSpeed}, " +
+            $"SpeedOnly={(o.SpeedOnlyMode ? "on" : "off")}, " +
+            $"HarmonyTweaks={(o.EnableHarmonyTweaks ? "on" : "off")}, " +
+            $"CeilingGuard={(o.CeilingGuardEnabled ? "on" : "off")}, " +
+            $"ForwardProbe={(o.ForwardProbeCeiling ? "on" : "off")} (dist={o.ForwardProbeDistance})");
     }
 
     /// <summary>
-    /// Persists the current config to disk. Cross-process and cross-thread
-    /// safe via global mutex + in-process lock + retry-with-backoff.
+    /// Reads the pre-1.6.0 file, if present, and brings it to the last legacy
+    /// schema so it seeds the new files with corrected values. Returns
+    /// <c>null</c> when there is no legacy file or it can't be read.
     /// </summary>
-    /// <remarks>
-    /// On a remote-MP client, the server-owned fields in memory (enforcement
-    /// flag, min/max caps, client permissions, server blacklist) were pushed by
-    /// that server. The client and the single-player integrated server share
-    /// this file, so saving them would carry the server's enforcement into the
-    /// player's own worlds. Instead the player's existing values for those
-    /// fields are re-read from disk and written back unchanged; only
-    /// client-owned fields are updated. Single-player saves everything, since
-    /// the player owns the full config there.
-    /// </remarks>
-    public static void Save(ICoreAPI api)
+    private static StepUpOptions? LoadLegacy(ICoreAPI api)
     {
-        bool isRemoteMultiplayerClient = api is ICoreClientAPI capi && !capi.IsSinglePlayer;
+        if (!TryLoad(api, LegacyFileName, out StepUpOptions? legacy) || legacy == null) return null;
 
-        lock (_saveLock)
+        legacy.BlockBlacklist ??= new List<string>();
+        MigrationRunner.Run(legacy, Math.Max(0, legacy.SchemaVersion));
+        return legacy;
+    }
+
+    /// <summary>
+    /// Loads <paramref name="fileName"/> from ModConfig. Returns <c>false</c>
+    /// only when the file exists but can't be parsed; a missing file returns
+    /// <c>true</c> with <paramref name="value"/> set to <c>null</c>.
+    /// </summary>
+    private static bool TryLoad<T>(ICoreAPI api, string fileName, out T? value) where T : class
+    {
+        try
         {
-            using var mutex = new Mutex(false, GlobalMutexName);
-            bool got = false;
-            try { got = mutex.WaitOne(500); } catch { }
+            value = api.LoadModConfig<T>(fileName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ModLog.Error(api, "Could not read {0}; using defaults until it's fixed. It will not be overwritten on load. {1}", fileName, ex.Message);
+            value = null;
+            return false;
+        }
+    }
 
-            if (!got)
-            {
-                ModLog.Warning(api, "Could not acquire config save mutex; skipping save.");
-                return;
-            }
-
-            // Built under the mutex so the disk read and the write see the same file.
-            StepUpOptions toStore = isRemoteMultiplayerClient
-                ? ConfigSyncPacketMapper.WithLocalServerFields(StepUpOptions.Current, TryLoadFromDisk(api))
-                : StepUpOptions.Current;
-
+    /// <summary>
+    /// Writes <paramref name="data"/> with retry and backoff. Sharing
+    /// violations happen when an editor or antivirus briefly holds the file.
+    /// </summary>
+    private static void Store<T>(ICoreAPI api, T data, string fileName, object fileLock)
+    {
+        lock (fileLock)
+        {
             const int maxAttempts = 8;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 try
                 {
-                    api.StoreModConfig(toStore, FileName);
-                    ModLog.Verbose(api, "Saved configuration.");
+                    api.StoreModConfig(data, fileName);
+                    ModLog.Verbose(api, "Saved {0}.", fileName);
                     return;
                 }
                 catch (IOException ioex)
                 {
-                    int delayMs = 15 * (1 << Math.Min(attempt, 6)) + new Random().Next(0, 10);
-                    ModLog.Warning(api, "Save {0}/{1} failed: {2}. Retrying in {3} ms.",
-                        attempt, maxAttempts, ioex.Message, delayMs);
+                    int delayMs = 15 * (1 << Math.Min(attempt, 6)) + Random.Shared.Next(0, 10);
+                    ModLog.Warning(api, "Save {0}/{1} of {2} failed: {3}. Retrying in {4} ms.",
+                        attempt, maxAttempts, fileName, ioex.Message, delayMs);
                     Thread.Sleep(delayMs);
                 }
             }
-            ModLog.Error(api, "Could not save configuration after multiple attempts.");
+            ModLog.Error(api, "Could not save {0} after multiple attempts.", fileName);
         }
-    }
-
-    /// <summary>
-    /// Reads the config file as it currently is on disk, or <c>null</c> if it
-    /// is missing or unreadable (the caller then falls back to defaults).
-    /// </summary>
-    private static StepUpOptions? TryLoadFromDisk(ICoreAPI api)
-    {
-        try
-        {
-            return api.LoadModConfig<StepUpOptions>(FileName);
-        }
-        catch (Exception ex)
-        {
-            ModLog.Warning(api, "Could not read config before saving; using defaults for server-owned fields: {0}", ex.Message);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// True when server enforcement should apply during load-time clamping.
-    /// Single-player players are also the server admin and may opt in to
-    /// enforcing caps on themselves, so the flag is honored verbatim.
-    /// </summary>
-    private static bool IsEnforcedForThisSide()
-    {
-        return StepUpOptions.Current.ServerEnforceSettings;
-    }
-
-    /// <summary>
-    /// Clamps server-cap properties to their hard ceilings and ensures
-    /// min &lt;= max ordering. Idempotent.
-    /// </summary>
-    private static bool NormalizeCaps(ICoreAPI api)
-    {
-        bool dirty = false;
-
-        float oldMinHeight = StepUpOptions.Current.ServerMinStepHeight, oldMaxHeight = StepUpOptions.Current.ServerMaxStepHeight;
-        float oldMinSpeed = StepUpOptions.Current.ServerMinStepSpeed, oldMaxSpeed = StepUpOptions.Current.ServerMaxStepSpeed;
-
-        StepUpOptions.Current.ServerMinStepHeight = GameMath.Clamp(StepUpOptions.Current.ServerMinStepHeight, ServerCapMinHeight, ServerCapMaxHeight);
-        StepUpOptions.Current.ServerMaxStepHeight = GameMath.Clamp(StepUpOptions.Current.ServerMaxStepHeight, ServerCapMinHeight, ServerCapMaxHeight);
-        StepUpOptions.Current.ServerMinStepSpeed = GameMath.Clamp(StepUpOptions.Current.ServerMinStepSpeed, ServerCapMinSpeed, ServerCapMaxSpeed);
-        StepUpOptions.Current.ServerMaxStepSpeed = GameMath.Clamp(StepUpOptions.Current.ServerMaxStepSpeed, ServerCapMinSpeed, ServerCapMaxSpeed);
-
-        if (StepUpOptions.Current.ServerMinStepHeight > StepUpOptions.Current.ServerMaxStepHeight)
-        {
-            ModLog.Warning(api, "ServerMinStepHeight > ServerMaxStepHeight. Adjusting Min to Max.");
-            StepUpOptions.Current.ServerMinStepHeight = StepUpOptions.Current.ServerMaxStepHeight;
-        }
-        if (StepUpOptions.Current.ServerMinStepSpeed > StepUpOptions.Current.ServerMaxStepSpeed)
-        {
-            ModLog.Warning(api, "ServerMinStepSpeed > ServerMaxStepSpeed. Adjusting Min to Max.");
-            StepUpOptions.Current.ServerMinStepSpeed = StepUpOptions.Current.ServerMaxStepSpeed;
-        }
-
-        if (oldMinHeight != StepUpOptions.Current.ServerMinStepHeight || oldMaxHeight != StepUpOptions.Current.ServerMaxStepHeight)
-        {
-            ModLog.Verbose(api, $"Normalized height caps: Min={StepUpOptions.Current.ServerMinStepHeight}, Max={StepUpOptions.Current.ServerMaxStepHeight}");
-            dirty = true;
-        }
-        if (oldMinSpeed != StepUpOptions.Current.ServerMinStepSpeed || oldMaxSpeed != StepUpOptions.Current.ServerMaxStepSpeed)
-        {
-            ModLog.Verbose(api, $"Normalized speed caps: Min={StepUpOptions.Current.ServerMinStepSpeed}, Max={StepUpOptions.Current.ServerMaxStepSpeed}");
-            dirty = true;
-        }
-
-        return dirty;
     }
 }

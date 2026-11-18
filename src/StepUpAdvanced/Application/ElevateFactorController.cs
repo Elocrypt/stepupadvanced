@@ -202,8 +202,13 @@ internal sealed class ElevateFactorController
         ApplyNow(stepUpEnabled);
     }
 
+    // Server caps only count once a server has actually sent them. Before
+    // that (Basic mode) the server-owned fields hold defaults, not this
+    // server's limits, and clamping the player's settings to them at startup
+    // would save those defaults into the player's own file.
     private bool IsEnforced
-        => EnforcementState.IsEnforced(EnumAppSide.Client, capi.IsSinglePlayer, StepUpOptions.Current);
+        => !BasicModeState.Active
+           && EnforcementState.IsEnforced(EnumAppSide.Client, capi.IsSinglePlayer, StepUpOptions.Current);
 
     private float ClampSpeed(float speed)
         => ElevateFactorMath.Clamp(

@@ -115,4 +115,67 @@ public class StepUpGateTests
     public void AllFlagsOn_GroundedSprinting_Open()
         => Gate(sprintOnly: true, disableWhileSneaking: true, disableWhileAirborne: true,
                 sprint: true, sneak: false, onGround: true).Should().BeTrue();
+
+    // ─── Server requirements (1.6.0) ────────────────────────────────────
+
+    private static GateFlags Resolve(
+        bool sprintOnly = false,
+        bool sneaking = false,
+        bool airborne = false,
+        bool enforced = true,
+        bool requireSprint = false,
+        bool requireNoAirborne = false)
+        => StepUpGate.ResolveFlags(sprintOnly, sneaking, airborne, enforced, requireSprint, requireNoAirborne);
+
+    [Fact]
+    public void Requirements_Off_KeepPlayersOwnFlags()
+    {
+        Resolve(sprintOnly: true, sneaking: true, airborne: true)
+            .Should().Be(new GateFlags(true, true, true));
+        Resolve().Should().Be(new GateFlags(false, false, false));
+    }
+
+    [Fact]
+    public void Requirements_AddRestrictions_WhenEnforced()
+    {
+        Resolve(requireSprint: true, requireNoAirborne: true)
+            .Should().Be(new GateFlags(SprintOnly: true, DisableWhileSneaking: false, DisableWhileAirborne: true));
+    }
+
+    /// <summary>A server can add a restriction but never lift one the player chose.</summary>
+    [Fact]
+    public void Requirements_NeverLiftPlayersOwnRestrictions()
+    {
+        Resolve(sprintOnly: true, airborne: true, requireSprint: false, requireNoAirborne: false)
+            .Should().Be(new GateFlags(true, false, true));
+    }
+
+    /// <summary>
+    /// Enforcement off (including Basic mode, where the controller passes
+    /// <c>false</c>) means the server's requirements don't apply.
+    /// </summary>
+    [Fact]
+    public void Requirements_Ignored_WhenNotEnforced()
+    {
+        Resolve(enforced: false, requireSprint: true, requireNoAirborne: true)
+            .Should().Be(new GateFlags(false, false, false));
+    }
+
+    [Fact]
+    public void Sneaking_IsNeverRequiredByServer()
+    {
+        Resolve(requireSprint: true, requireNoAirborne: true).DisableWhileSneaking.Should().BeFalse();
+    }
+
+    /// <summary>End to end with the gate: a required no-airborne closes it mid-air.</summary>
+    [Fact]
+    public void RequiredNoAirborne_ClosesGateInTheAir()
+    {
+        var f = Resolve(requireNoAirborne: true);
+
+        StepUpGate.ShouldApplyStepUp(f.SprintOnly, f.DisableWhileSneaking, f.DisableWhileAirborne,
+            sprint: false, sneak: false, onGround: false, swimming: false).Should().BeFalse();
+        StepUpGate.ShouldApplyStepUp(f.SprintOnly, f.DisableWhileSneaking, f.DisableWhileAirborne,
+            sprint: false, sneak: false, onGround: true, swimming: false).Should().BeTrue();
+    }
 }

@@ -5,6 +5,45 @@ All notable changes to StepUp Advanced will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.6.0] - 2026/11/18
+
+### Added
+
+- **Servers can require sprint-only and no-airborne step-up.** Two new server
+  settings, `ServerRequireSprintOnly` and `ServerRequireNoAirborneStepUp`,
+  apply to every player while `ServerEnforceSettings` is on. They only add the
+  restriction: a player who turned either option on keeps it, but nobody can
+  turn off one the server requires. The airborne option closes the jump-reach
+  advantage a tall step height gives, which servers couldn't limit before.
+  Disabling step-up while sneaking stays each player's own choice, since it
+  only changes feel. Both settings work with older versions: older clients
+  ignore them, and newer clients on older servers treat them as off.
+
+### Changed
+
+- **Settings are now split into two files.** `StepUpAdvancedConfig.json` is
+  replaced by `StepUpAdvanced_Server.json` (server limits, permissions, and the
+  server blacklist) and `StepUpAdvanced_Client.json` (your own height, speed,
+  toggles, and Ceiling Guard settings). Each side only ever writes its own
+  file, so a server's limits can no longer end up in your single-player worlds,
+  and a dedicated server's config no longer carries player settings it never
+  uses. In single-player you have both: edit the server file for your world's
+  limits, the client file for how step-up feels to you. Edits to either file
+  apply as soon as you save it.
+- Your existing settings carry over automatically the first time 1.6.0 runs.
+  The old `StepUpAdvancedConfig.json` is left in place as a backup and is no
+  longer read after that; you can delete it once you've checked the new files.
+- Out-of-range values in your client file are no longer lowered to a server's
+  limits when the game loads. Server limits still apply while you play on that
+  server, but your own settings are kept for everywhere else.
+
+### Removed
+
+- The `DefaultSpeed` setting. It hasn't been used since 1.5.0 (toggling
+  step-up off returns rise speed to vanilla).
+
 ## [1.5.0] - 2026/11/17
 
 ### Added
@@ -265,6 +304,8 @@ fixes from that release.
 
 - Ceiling guard & forward probe not properly detecting ledges.
 
+[Unreleased]: https://github.com/Elocrypt/stepupadvanced/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Elocrypt/stepupadvanced/compare/v1.2.4...v1.3.0

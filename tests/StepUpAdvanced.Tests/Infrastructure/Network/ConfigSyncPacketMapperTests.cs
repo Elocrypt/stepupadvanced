@@ -14,11 +14,11 @@ namespace StepUpAdvanced.Tests.Infrastructure.Network;
 /// invariants matter:
 /// <list type="number">
 ///   <item><see cref="ConfigSyncPacketMapper.ToPacket"/> faithfully copies
-///         the ten enforcement-relevant fields from a
+///         the twelve enforcement-relevant fields from a
 ///         <see cref="StepUpOptions"/> to a fresh
 ///         <see cref="ConfigSyncPacket"/>, and copies nothing else
 ///         (the wire shape is narrow by construction).</item>
-///   <item><see cref="ConfigSyncPacketMapper.Apply"/> merges those ten
+///   <item><see cref="ConfigSyncPacketMapper.Apply"/> merges those twelve
 ///         fields into an existing <see cref="StepUpOptions"/> without
 ///         touching client-local fields. This is the central reason the
 ///         type split exists — fields like <c>StepHeight</c>,
@@ -50,10 +50,12 @@ public class ConfigSyncPacketMapperTests
         ServerMaxStepSpeed = 1.85f,
         ShowServerEnforcedNotice = false,
         BlockBlacklist = new List<string> { "test:fenceblock", "test:slabblock" },
+        ServerRequireSprintOnly = true,
+        ServerRequireNoAirborneStepUp = true,
     };
 
     [Fact]
-    public void ToPacket_CopiesAllTenEnforcementFields()
+    public void ToPacket_CopiesAllEnforcementFields()
     {
         var options = BuildEnforcementSentinels();
 
@@ -69,6 +71,8 @@ public class ConfigSyncPacketMapperTests
         packet.ServerMaxStepSpeed.Should().Be(1.85f);
         packet.ShowServerEnforcedNotice.Should().BeFalse();
         packet.BlockBlacklist.Should().BeEquivalentTo(new[] { "test:fenceblock", "test:slabblock" });
+        packet.ServerRequireSprintOnly.Should().BeTrue();
+        packet.ServerRequireNoAirborneStepUp.Should().BeTrue();
     }
 
     /// <summary>
@@ -95,7 +99,6 @@ public class ConfigSyncPacketMapperTests
             StepHeight = 1.85f,
             StepSpeed = 1.95f,
             DefaultHeight = 0.45f,
-            DefaultSpeed = 0.55f,
             StepHeightIncrement = 0.25f,
             StepSpeedIncrement = 0.25f,
             EnableHarmonyTweaks = false,
@@ -124,7 +127,6 @@ public class ConfigSyncPacketMapperTests
         fresh.StepHeight.Should().Be(defaults.StepHeight);
         fresh.StepSpeed.Should().Be(defaults.StepSpeed);
         fresh.DefaultHeight.Should().Be(defaults.DefaultHeight);
-        fresh.DefaultSpeed.Should().Be(defaults.DefaultSpeed);
         fresh.StepHeightIncrement.Should().Be(defaults.StepHeightIncrement);
         fresh.StepSpeedIncrement.Should().Be(defaults.StepSpeedIncrement);
         fresh.EnableHarmonyTweaks.Should().Be(defaults.EnableHarmonyTweaks);
@@ -182,7 +184,6 @@ public class ConfigSyncPacketMapperTests
             StepHeight = 1.7f,
             StepSpeed = 1.6f,
             DefaultHeight = 0.5f,
-            DefaultSpeed = 0.65f,
             StepHeightIncrement = 0.15f,
             StepSpeedIncrement = 0.2f,
             EnableHarmonyTweaks = false,
@@ -204,7 +205,6 @@ public class ConfigSyncPacketMapperTests
         current.StepHeight.Should().Be(1.7f);
         current.StepSpeed.Should().Be(1.6f);
         current.DefaultHeight.Should().Be(0.5f);
-        current.DefaultSpeed.Should().Be(0.65f);
         current.StepHeightIncrement.Should().Be(0.15f);
         current.StepSpeedIncrement.Should().Be(0.2f);
         current.EnableHarmonyTweaks.Should().BeFalse();
@@ -223,10 +223,10 @@ public class ConfigSyncPacketMapperTests
     /// to <c>current</c>. The pre-3b handler reasserted
     /// <c>AllowClientChange*</c> redundantly after the wholesale-replace
     /// (no-ops because the replace had already set them); the narrow
-    /// mapper applies all ten fields uniformly with no redundancy.
+    /// mapper applies all fields uniformly with no redundancy.
     /// </summary>
     [Fact]
-    public void Apply_OverwritesAllTenEnforcementFields()
+    public void Apply_OverwritesAllEnforcementFields()
     {
         // Start with the inverse of the sentinel values so every assert
         // below detects a missed write.
@@ -242,6 +242,8 @@ public class ConfigSyncPacketMapperTests
             ServerMaxStepSpeed = 1.3f,
             ShowServerEnforcedNotice = true,
             BlockBlacklist = new List<string> { "should-be-replaced" },
+            ServerRequireSprintOnly = false,
+            ServerRequireNoAirborneStepUp = false,
         };
         var packet = ConfigSyncPacketMapper.ToPacket(BuildEnforcementSentinels());
 
@@ -257,6 +259,8 @@ public class ConfigSyncPacketMapperTests
         current.ServerMaxStepSpeed.Should().Be(1.85f);
         current.ShowServerEnforcedNotice.Should().BeFalse();
         current.BlockBlacklist.Should().BeEquivalentTo(new[] { "test:fenceblock", "test:slabblock" });
+        current.ServerRequireSprintOnly.Should().BeTrue();
+        current.ServerRequireNoAirborneStepUp.Should().BeTrue();
     }
 
     /// <summary>
@@ -336,6 +340,8 @@ public class ConfigSyncPacketMapperTests
         twice.ServerMaxStepSpeed.Should().Be(once.ServerMaxStepSpeed);
         twice.ShowServerEnforcedNotice.Should().Be(once.ShowServerEnforcedNotice);
         twice.BlockBlacklist.Should().BeEquivalentTo(once.BlockBlacklist);
+        twice.ServerRequireSprintOnly.Should().Be(once.ServerRequireSprintOnly);
+        twice.ServerRequireNoAirborneStepUp.Should().Be(once.ServerRequireNoAirborneStepUp);
     }
 
     /// <summary>
@@ -383,19 +389,19 @@ public class ConfigSyncPacketMapperTests
 
     /// <summary>
     /// Sanity check: a brand-new <see cref="ConfigSyncPacket"/> has all
-    /// ten fields and no others. If a future maintainer adds a property
+    /// twelve fields and no others. If a future maintainer adds a property
     /// without a <c>ProtoMember</c> attribute, this test is a coarse
     /// reminder to add the attribute (the count check fails).
     /// </summary>
     [Fact]
-    public void ConfigSyncPacket_HasExactlyTenProtoMembers()
+    public void ConfigSyncPacket_HasExactlyTwelveProtoMembers()
     {
         var protoMemberCount = typeof(ConfigSyncPacket)
             .GetProperties()
             .SelectMany(p => p.GetCustomAttributes(typeof(ProtoMemberAttribute), inherit: false))
             .Count();
 
-        protoMemberCount.Should().Be(10);
+        protoMemberCount.Should().Be(12);
     }
 
     /// <summary>
@@ -440,77 +446,65 @@ public class ConfigSyncPacketMapperTests
         current.BlockBlacklist.Should().BeEmpty();
     }
 
-    // ─── WithLocalServerFields: remote-server saves ─────────────────────
+    // ─── Mixed versions on the wire ─────────────────────────────────────
 
     /// <summary>
-    /// The bug this guards: a remote server's enforcement saved into the
-    /// player's shared config file and then enforced in single-player.
-    /// Every server-owned field must come from the local file, not memory.
+    /// The 1.5.x packet shape (members 1-10). Used only to prove that a
+    /// 1.6.0 client and a 1.5.x server, or the other way round, still
+    /// understand each other.
     /// </summary>
-    [Fact]
-    public void WithLocalServerFields_TakesAllServerOwnedFieldsFromLocal()
+    [ProtoContract]
+    public sealed class LegacyPacketV15
     {
-        var current = BuildEnforcementSentinels(); // what the server pushed
-        var local = new StepUpOptions
+        [ProtoMember(1)] public bool ServerEnforceSettings { get; set; }
+        [ProtoMember(2)] public bool AllowClientChangeStepHeight { get; set; }
+        [ProtoMember(3)] public bool AllowClientChangeStepSpeed { get; set; }
+        [ProtoMember(4)] public bool AllowClientConfigReload { get; set; }
+        [ProtoMember(5)] public float ServerMinStepHeight { get; set; }
+        [ProtoMember(6)] public float ServerMaxStepHeight { get; set; }
+        [ProtoMember(7)] public float ServerMinStepSpeed { get; set; }
+        [ProtoMember(8)] public float ServerMaxStepSpeed { get; set; }
+        [ProtoMember(9)] public bool ShowServerEnforcedNotice { get; set; }
+        [ProtoMember(10)] public List<string>? BlockBlacklist { get; set; }
+    }
+
+    /// <summary>1.6.0 client on a 1.5.x server: the new requirements read as off.</summary>
+    [Fact]
+    public void OldServerPacket_ReadsWithRequirementsOff()
+    {
+        var old = new LegacyPacketV15
         {
-            ServerEnforceSettings = false,
-            AllowClientChangeStepHeight = true,
-            AllowClientChangeStepSpeed = true,
-            AllowClientConfigReload = false,
-            ServerMinStepHeight = 0.6f,
-            ServerMaxStepHeight = 1.2f,
-            ServerMinStepSpeed = 0.7f,
-            ServerMaxStepSpeed = 1.3f,
-            ShowServerEnforcedNotice = true,
-            BlockBlacklist = new List<string> { "game:ladder-wood-north" },
+            ServerEnforceSettings = true,
+            ServerMaxStepHeight = 1.4f,
+            BlockBlacklist = new List<string> { "game:a" },
         };
 
-        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
+        using var stream = new MemoryStream();
+        Serializer.Serialize(stream, old);
+        stream.Position = 0;
+        var revived = Serializer.Deserialize<ConfigSyncPacket>(stream);
 
-        ConfigSyncPacketMapper.ToPacket(result).Should().BeEquivalentTo(ConfigSyncPacketMapper.ToPacket(local));
+        revived.ServerEnforceSettings.Should().BeTrue();
+        revived.ServerMaxStepHeight.Should().Be(1.4f);
+        revived.BlockBlacklist.Should().Equal("game:a");
+        revived.ServerRequireSprintOnly.Should().BeFalse();
+        revived.ServerRequireNoAirborneStepUp.Should().BeFalse();
     }
 
+    /// <summary>1.5.x client on a 1.6.0 server: the unknown fields are skipped, the rest still arrives.</summary>
     [Fact]
-    public void WithLocalServerFields_KeepsClientOwnedFieldsFromCurrent()
+    public void NewServerPacket_ReadsOnOldClient()
     {
-        var current = BuildEnforcementSentinels();
-        current.StepHeight = 3.3f;
-        current.StepSpeed = 1.7f;
-        current.QuietMode = true;
-        current.SprintOnlyStepUp = true;
-        var local = new StepUpOptions { StepHeight = 0.9f, StepSpeed = 0.8f };
+        var packet = ConfigSyncPacketMapper.ToPacket(BuildEnforcementSentinels());
 
-        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
+        using var stream = new MemoryStream();
+        Serializer.Serialize(stream, packet);
+        stream.Position = 0;
+        var revived = Serializer.Deserialize<LegacyPacketV15>(stream);
 
-        result.StepHeight.Should().Be(3.3f);
-        result.StepSpeed.Should().Be(1.7f);
-        result.QuietMode.Should().BeTrue();
-        result.SprintOnlyStepUp.Should().BeTrue();
-    }
-
-    [Fact]
-    public void WithLocalServerFields_DoesNotMutateInputs()
-    {
-        var current = BuildEnforcementSentinels();
-        var local = new StepUpOptions { ServerEnforceSettings = false, BlockBlacklist = new List<string> { "a" } };
-        var currentBefore = ConfigSyncPacketMapper.ToPacket(current);
-        var currentList = current.BlockBlacklist;
-
-        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local);
-        result.BlockBlacklist.Add("b");
-
-        ConfigSyncPacketMapper.ToPacket(current).Should().BeEquivalentTo(currentBefore);
-        current.BlockBlacklist.Should().BeSameAs(currentList);
-        local.BlockBlacklist.Should().Equal("a");
-    }
-
-    [Fact]
-    public void WithLocalServerFields_NullLocal_UsesFreshConfigDefaults()
-    {
-        var current = BuildEnforcementSentinels();
-
-        var result = ConfigSyncPacketMapper.WithLocalServerFields(current, local: null);
-
-        ConfigSyncPacketMapper.ToPacket(result).Should().BeEquivalentTo(ConfigSyncPacketMapper.ToPacket(new StepUpOptions()));
+        revived.ServerEnforceSettings.Should().Be(packet.ServerEnforceSettings);
+        revived.ServerMaxStepHeight.Should().Be(packet.ServerMaxStepHeight);
+        revived.ServerMaxStepSpeed.Should().Be(packet.ServerMaxStepSpeed);
+        revived.BlockBlacklist.Should().Equal(packet.BlockBlacklist!);
     }
 }

@@ -29,4 +29,22 @@ internal static class EnforcementState
     {
         return config?.ServerEnforceSettings == true;
     }
+
+    /// <summary>
+    /// True when a server forbids reloading the player's config: it runs the
+    /// mod (not Basic mode), enforces, and doesn't allow client reloads.
+    /// Shared by the Reload hotkey and the client file watcher so both
+    /// follow the same rule.
+    /// </summary>
+    /// <param name="basicModeActive">
+    ///   In Basic mode the server fields hold defaults, not this server's
+    ///   rules, so nothing is blocked.
+    /// </param>
+    /// <param name="config">
+    ///   The active config. <c>null</c> is treated as not blocked.
+    /// </param>
+    public static bool IsClientReloadBlocked(bool basicModeActive, StepUpOptions? config)
+        => !basicModeActive
+           && config?.ServerEnforceSettings == true
+           && !config.AllowClientConfigReload;
 }

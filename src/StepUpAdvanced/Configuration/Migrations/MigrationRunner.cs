@@ -20,7 +20,8 @@ namespace StepUpAdvanced.Configuration.Migrations;
 /// </para>
 /// <para>
 /// The runner does NOT update <c>StepUpOptions.SchemaVersion</c> — that's
-/// the caller's responsibility (currently <see cref="ConfigStore.MergeAndMigrate"/>),
+/// the caller's responsibility (currently <c>ConfigStore.LoadLegacy</c>, which only
+/// migrates a pre-1.6.0 file before it seeds the new files),
 /// because the schema-version write is paired with other "this config is
 /// now current" bookkeeping that lives outside the migration concern.
 /// </para>

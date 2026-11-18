@@ -198,11 +198,21 @@ internal sealed class StepHeightController
         // vanilla baseline this tick. Read live control + ground state off the
         // local player; Controls is non-null on a player EntityAgent and Entity
         // was guarded above.
+        // An enforcing server can require sprint-only and no-airborne on top
+        // of the player's own flags. inputs.IsEnforced is already false in
+        // Basic mode, so a server without the mod can't require anything.
         var controls = player.Entity.Controls;
-        bool gateOpen = StepUpGate.ShouldApplyStepUp(
+        GateFlags flags = StepUpGate.ResolveFlags(
             cfg.SprintOnlyStepUp,
             cfg.DisableStepUpWhileSneaking,
             cfg.DisableStepUpWhileAirborne,
+            inputs.IsEnforced,
+            cfg.ServerRequireSprintOnly,
+            cfg.ServerRequireNoAirborneStepUp);
+        bool gateOpen = StepUpGate.ShouldApplyStepUp(
+            flags.SprintOnly,
+            flags.DisableWhileSneaking,
+            flags.DisableWhileAirborne,
             controls.Sprint,
             controls.Sneak,
             player.Entity.OnGround,
@@ -505,8 +515,13 @@ internal sealed class StepHeightController
         return blockedAll ? Math.Min(hereClear, tinySafe) : hereClear;
     }
 
+    // Server caps only count once a server has actually sent them. Before
+    // that (Basic mode) the server-owned fields hold defaults, not this
+    // server's limits, and clamping the player's settings to them at startup
+    // would save those defaults into the player's own file.
     private bool IsEnforced
-        => EnforcementState.IsEnforced(EnumAppSide.Client, capi.IsSinglePlayer, StepUpOptions.Current);
+        => !BasicModeState.Active
+           && EnforcementState.IsEnforced(EnumAppSide.Client, capi.IsSinglePlayer, StepUpOptions.Current);
 
     private float ClampHeight(float height)
         => StepHeightClamp.Clamp(

@@ -60,4 +60,22 @@ internal sealed record class ConfigSyncPacket
     /// <c>BlockBlacklistOptions.BlockCodes</c> at probe time.
     /// </summary>
     [ProtoMember(10)] public List<string>? BlockBlacklist { get; set; }
+
+    /// <summary>
+    /// When enforcement is on, requires sprint-only step-up for every player.
+    /// Adds the restriction on top of the player's own setting; never lifts it.
+    /// </summary>
+    /// <remarks>
+    /// Added in 1.6.0. Older clients skip the unknown field; on an older
+    /// server it is simply absent and reads as <c>false</c>.
+    /// </remarks>
+    [ProtoMember(11)] public bool ServerRequireSprintOnly { get; set; }
+
+    /// <summary>
+    /// When enforcement is on, suppresses enhanced step height while airborne
+    /// for every player, so a tall step height can't extend jump reach.
+    /// Adds the restriction on top of the player's own setting; never lifts it.
+    /// </summary>
+    /// <remarks>Added in 1.6.0; same compatibility as <see cref="ServerRequireSprintOnly"/>.</remarks>
+    [ProtoMember(12)] public bool ServerRequireNoAirborneStepUp { get; set; }
 }

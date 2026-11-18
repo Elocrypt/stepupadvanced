@@ -118,7 +118,7 @@ internal sealed class HotkeyHandlers
         // Skipped in Basic mode: the local enforcement flag describes the
         // player's own single-player setup, not this server, and a reload
         // can't raise anything there.
-        if (!BasicModeState.Active && StepUpOptions.Current?.ServerEnforceSettings == true && !StepUpOptions.Current.AllowClientConfigReload)
+        if (EnforcementState.IsClientReloadBlocked(BasicModeState.Active, StepUpOptions.Current))
         {
             if (toasts.ReloadBlocked.TryShow())
                 ChatFormatting.Client(capi, $"{ChatFormatting.Tag} {ChatFormatting.Warn(ChatFormatting.L("server-enforced"))} – {ChatFormatting.Muted(ChatFormatting.L("reload-blocked"))}");

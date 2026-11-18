@@ -46,6 +46,11 @@ internal sealed class ConfigSaveQueue
     private static readonly TimeSpan MinSaveInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly ICoreClientAPI capi;
+
+    // Called before and after each write so the client file watcher can
+    // ignore the mod's own saves. Re-arming after the write keeps the
+    // window open even when a retried save takes longer than the window.
+    private readonly Action? suppressWatcher;
     // .NET 9 Lock type: under C# 13 the lock statement compiles to
     // Lock.EnterScope() instead of Monitor.Enter on a syncblock — lower
     // overhead for this hot-ish coalescing gate.
@@ -53,9 +58,10 @@ internal sealed class ConfigSaveQueue
     private volatile bool saveQueued;
     private DateTime lastSaveTime = DateTime.MinValue;
 
-    public ConfigSaveQueue(ICoreClientAPI capi)
+    public ConfigSaveQueue(ICoreClientAPI capi, Action? suppressWatcher = null)
     {
         this.capi = capi;
+        this.suppressWatcher = suppressWatcher;
     }
 
     /// <summary>
@@ -84,7 +90,9 @@ internal sealed class ConfigSaveQueue
             var now = DateTime.UtcNow;
             if (now - lastSaveTime < MinSaveInterval) return;
             lastSaveTime = now;
+            suppressWatcher?.Invoke();
             ConfigStore.Save(capi);
+            suppressWatcher?.Invoke();
         }, CallbackDelayMs);
     }
 }

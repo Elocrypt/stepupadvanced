@@ -95,7 +95,12 @@ On a server that doesn't have the mod, it runs in **Basic mode**: step-up up to 
 
 Server operators use the same commands with a slash — `/sua add`, `/sua remove`, `/sua remove all`, `/sua reload` — to manage the server-side blacklist and reload the server config. The server list is enforced globally; your client list stays local and is never touched by server admin actions.
 
-Settings live in `ModConfig/StepUpAdvancedConfig.json` under your Vintage Story data folder. Edit it and press <kbd>Home</kbd> to reload, or use the hotkeys for live adjustments. On a server, its limits still apply after a reload, and its settings are never saved into your file.
+Settings live in two files in `ModConfig/` under your Vintage Story data folder:
+
+- **`StepUpAdvanced_Client.json`**: your own settings (step height and speed, the on/off toggle, sprint/sneak/airborne options, Ceiling Guard). Edits apply as soon as you save the file (<kbd>Home</kbd> also reloads it), or use the hotkeys for live adjustments. On a server that doesn't allow config reloads, file edits apply the next time you join.
+- **`StepUpAdvanced_Server.json`**: the server's limits, permissions, and blacklist. Only the server reads and writes it; it reloads automatically when you save it, or with `/sua reload`. In single-player this is your world's own server, so edit it to set limits for yourself.
+
+Your client file is never changed by a server's settings. Settings from older versions (`StepUpAdvancedConfig.json`) are copied over automatically the first time you run 1.6.0; the old file is kept as a backup and can be deleted.
 
 ## Server enforcement
 
@@ -105,7 +110,14 @@ Settings live in `ModConfig/StepUpAdvancedConfig.json` under your Vintage Story 
 - Hotkeys for height/speed changes are disabled where not permitted.
 - Step height and speed are clamped between the server's min/max limits as soon as you join, whatever your own config says.
 - Server-configured limits are validated and corrected if out of bounds.
-- The server's settings only apply while you're connected; they're never written to your local config.
+- The server's settings only apply while you're connected; they're never written to your client file.
+
+Servers can also require two of the movement options for everyone, on top of each player's own settings:
+
+- **`ServerRequireSprintOnly`**: enhanced step height only while sprinting.
+- **`ServerRequireNoAirborneStepUp`**: no enhanced step height in mid-air, so a tall step height can't be used to reach ledges you jumped just short of.
+
+These only add restrictions while enforcement is on. A player can still turn either option on for themselves, but can't turn off one the server requires.
 
 ## Compatibility
 

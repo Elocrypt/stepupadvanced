@@ -5,13 +5,23 @@ using ProtoBuf;
 namespace StepUpAdvanced.Configuration;
 
 /// <summary>
-/// Persistent + wire-protocol options for StepUp Advanced.
+/// Merged runtime view of every StepUp Advanced setting. Everything else in
+/// the mod reads from <see cref="Current"/>.
 /// </summary>
 /// <remarks>
-/// Used as both the on-disk JSON config and the network wire format.
-/// <b>Wire-protocol stability:</b> never reuse <c>ProtoMember</c> numbers —
-/// new fields get new numbers; removing a field requires a migration.
-/// Adding a field with a sensible default does not require a schema bump.
+/// <para>
+/// Since 1.6.0 this type is not saved directly. Server-owned fields persist in
+/// <c>StepUpAdvanced_Server.json</c> (<see cref="StepUpServerOptions"/>) and
+/// player-owned fields in <c>StepUpAdvanced_Client.json</c>
+/// (<see cref="StepUpClientOptions"/>); <see cref="ConfigSplit"/> decides
+/// which is which. It is still deserialized from the pre-1.6.0
+/// <c>StepUpAdvancedConfig.json</c> to seed those files, so property names
+/// must not change.
+/// </para>
+/// <para>
+/// <b>ProtoMember numbers:</b> never reuse one. 9 was <c>DefaultSpeed</c>
+/// (unused since 1.5.0, removed in 1.6.0).
+/// </para>
 /// </remarks>
 [ProtoContract]
 public class StepUpOptions
@@ -25,12 +35,8 @@ public class StepUpOptions
     [ProtoMember(6), DefaultValue(1.2f)] public float StepHeight { get; set; } = 1.2f;
     [ProtoMember(7), DefaultValue(1.3f)] public float StepSpeed { get; set; } = 1.3f;
 
+    /// <summary>Fallback height near blacklisted blocks and under low ceilings.</summary>
     [ProtoMember(8), DefaultValue(0.6f)] public float DefaultHeight { get; set; } = 0.6f;
-    /// <summary>
-    /// Not used by gameplay: toggling step-up off returns rise speed to
-    /// vanilla. Kept so existing config files and the wire format are unchanged.
-    /// </summary>
-    [ProtoMember(9), DefaultValue(0.7f)] public float DefaultSpeed { get; set; } = 0.7f;
 
     [ProtoMember(10), DefaultValue(0.1f)] public float StepHeightIncrement { get; set; } = 0.1f;
     [ProtoMember(11), DefaultValue(0.1f)] public float StepSpeedIncrement { get; set; } = 0.1f;
@@ -56,8 +62,8 @@ public class StepUpOptions
 
     /// <summary>
     /// When <c>true</c>, the enhanced step height applies only while sprinting;
-    /// the vanilla baseline is used otherwise. Client-side preference — not
-    /// server-enforced, no schema bump required (missing key defaults to <c>false</c>).
+    /// the vanilla baseline is used otherwise. Player's own preference; a
+    /// server can additionally require it (<see cref="ServerRequireSprintOnly"/>).
     /// </summary>
     [ProtoMember(28), DefaultValue(false)] public bool SprintOnlyStepUp { get; set; } = false;
 
@@ -71,7 +77,8 @@ public class StepUpOptions
     /// <summary>
     /// When <c>true</c>, the enhanced step height is suppressed while airborne
     /// (off the ground and not swimming), so a tall step height can't extend your
-    /// jump reach onto ledges you fell just short of. Client-side preference.
+    /// jump reach onto ledges you fell just short of. Player's own preference; a
+    /// server can additionally require it (<see cref="ServerRequireNoAirborneStepUp"/>).
     /// </summary>
     /// <remarks>
     /// Mirrors vanilla's own step gate: swimming is not treated as airborne.
@@ -81,17 +88,25 @@ public class StepUpOptions
     [ProtoMember(30), DefaultValue(false)] public bool DisableStepUpWhileAirborne { get; set; } = false;
 
     /// <summary>
-    /// Ambient global access to the active options. Reads happen everywhere;
-    /// writes happen only inside <see cref="ConfigStore"/> (hence the
-    /// <c>internal</c> setter).
+    /// Server-owned. When enforcement is on, every player gets sprint-only
+    /// step-up regardless of their own <see cref="SprintOnlyStepUp"/>.
+    /// The server can add this restriction but never remove a player's own.
     /// </summary>
-
-    public static StepUpOptions Current { get; internal set; } = new();
+    [ProtoMember(31), DefaultValue(false)] public bool ServerRequireSprintOnly { get; set; } = false;
 
     /// <summary>
-    /// Field-by-field copy. <see cref="BlockBlacklist"/> is shared with the
-    /// original, so callers that change it must assign a new list rather than
-    /// mutate the shared one.
+    /// Server-owned. When enforcement is on, enhanced step height is
+    /// suppressed while airborne for every player, regardless of their own
+    /// <see cref="DisableStepUpWhileAirborne"/>.
     /// </summary>
-    internal StepUpOptions ShallowCopy() => (StepUpOptions)MemberwiseClone();
+    [ProtoMember(32), DefaultValue(false)] public bool ServerRequireNoAirborneStepUp { get; set; } = false;
+
+    /// <summary>
+    /// Ambient global access to the active options. Reads happen everywhere.
+    /// The instance is never replaced: <see cref="ConfigStore"/> and the
+    /// packet mapper write their own fields onto it in place, which is what
+    /// lets the client and the integrated server share it in single-player.
+    /// </summary>
+    public static StepUpOptions Current { get; } = new();
+
 }

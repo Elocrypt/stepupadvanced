@@ -30,7 +30,8 @@ public class StepUpAdvancedModSystem : ModSystem
     // configSyncChannel are initialized.
     private ServerEnforcementCoordinator? serverCoordinator;
 
-    private string configPath => Path.Combine(sapi.GetOrCreateDataPath("ModConfig"), "StepUpAdvancedConfig.json");
+    // The watcher only reloads server-owned settings; players reload theirs with the hotkey.
+    private string serverConfigPath => Path.Combine(sapi.GetOrCreateDataPath("ModConfig"), ConfigStore.ServerFileName);
 
     // ─── Client-side state ──────────────────────────────────────────────
     // Nine independent per-toast flags — see MessageDebouncer.
@@ -60,10 +61,13 @@ public class StepUpAdvancedModSystem : ModSystem
     // Shared across both controllers so the debounce is axis-agnostic.
     private ConfigSaveQueue? configSaveQueue;
 
-    // Last config packet from a remote server. A client reload re-reads the
-    // player's local file, which knows nothing about this server's limits,
-    // so the packet is re-applied on top. Main thread only.
-    private ConfigSyncPacket? lastServerPacket;
+    // Watches StepUpAdvanced_Client.json so edits apply as soon as the file
+    // is saved, as the Reload hotkey would. Separate from the server watcher:
+    // each side watches only its own file.
+    private DebouncedConfigWatcher? clientConfigWatcher;
+
+    // Long enough to cover a save plus the watcher's own 150 ms debounce.
+    private const int ClientWatcherSuppressMs = 300;
 
     // How long after level finalize to wait for the server's config packet
     // before telling the player this server doesn't run the mod. The server
@@ -137,7 +141,7 @@ public class StepUpAdvancedModSystem : ModSystem
 
         physicsWriter = new PhysicsFieldWriter(capi);
 
-        configSaveQueue = new ConfigSaveQueue(capi);
+        configSaveQueue = new ConfigSaveQueue(capi, SuppressClientWatcher);
 
         elevateController = new ElevateFactorController(capi, toasts, configSaveQueue.RequestSave);
         stepController = new StepHeightController(capi, worldProbe, physicsWriter, toasts, configSaveQueue.RequestSave);
@@ -154,6 +158,7 @@ public class StepUpAdvancedModSystem : ModSystem
         capi.Event.RegisterGameTickListener((dt) => { stepController.ApplyForTick(); }, 50);
         elevateController.ApplyNow(stepController.IsEnabled);
         RegisterClientCommands();
+        SetupClientConfigWatcher();
         capi.Event.LevelFinalize += ScheduleBasicModeNotice;
     }
 
@@ -186,15 +191,13 @@ public class StepUpAdvancedModSystem : ModSystem
     /// <summary>Reloads config from disk and re-applies through both axes.</summary>
     private void ReloadConfig()
     {
-        ConfigStore.LoadOrUpgrade(capi);
+        // Loading can write corrections back to the file; don't let that
+        // write bounce back through the watcher as a second reload.
+        SuppressClientWatcher();
 
-        // On a remote server, keep its enforcement in force after the reload.
-        // Not needed in single-player: the integrated server shares this file
-        // and pushes its own update when the file changes.
-        if (!capi.IsSinglePlayer && lastServerPacket != null)
-        {
-            ConfigSyncPacketMapper.Apply(StepUpOptions.Current, lastServerPacket);
-        }
+        // Reloads only the player's own file. Server-owned fields aren't in
+        // it, so whatever the server last pushed stays in force.
+        ConfigStore.LoadOrUpgrade(capi);
 
         worldProbe?.Blacklist.MarkDirty();
 
@@ -213,7 +216,6 @@ public class StepUpAdvancedModSystem : ModSystem
             // Any config packet proves the server runs the mod (it sends one
             // on every join), so leave Basic mode before re-applying below.
             BasicModeState.Exit();
-            lastServerPacket = packet;
 
             // Merge only the enforcement fields; all client-local fields
             // (StepHeight, StepSpeed, QuietMode, probe tunables) are preserved.
@@ -254,12 +256,42 @@ public class StepUpAdvancedModSystem : ModSystem
     private void SetupConfigWatcher()
     {
         configWatcher = new DebouncedConfigWatcher(
-            filePath: configPath,
+            filePath: serverConfigPath,
             dispatchToMainThread: action => sapi.Event.EnqueueMainThreadTask(action, "ReloadStepUpOptions"));
 
         configWatcher.Start(sapi);
     }
 
+
+    /// <summary>
+    /// Starts watching the player's own config file. Runs after the initial
+    /// load, so the corrections it may have written don't trigger a reload.
+    /// </summary>
+    private void SetupClientConfigWatcher()
+    {
+        string path = Path.Combine(capi.GetOrCreateDataPath("ModConfig"), ConfigStore.ClientFileName);
+        clientConfigWatcher = new DebouncedConfigWatcher(
+            filePath: path,
+            dispatchToMainThread: action => capi.Event.EnqueueMainThreadTask(action, "ReloadStepUpClientConfig"));
+        clientConfigWatcher.ConfigFileChanged += OnClientConfigFileChanged;
+        clientConfigWatcher.Start(capi);
+    }
+
+    private void OnClientConfigFileChanged()
+    {
+        // Same rule as the Reload hotkey. The edit isn't lost: it loads on
+        // the next allowed reload or the next session.
+        if (EnforcementState.IsClientReloadBlocked(BasicModeState.Active, StepUpOptions.Current))
+        {
+            ModLog.Verbose(capi, "Client config changed on disk; reload blocked by server enforcement.");
+            return;
+        }
+
+        ModLog.Event(capi, "Detected client config file change. Reloading...");
+        ReloadConfig();
+    }
+
+    private void SuppressClientWatcher() => clientConfigWatcher?.Suppress(ClientWatcherSuppressMs);
 
     public void SuppressWatcher(bool suppress)
     {
@@ -269,6 +301,7 @@ public class StepUpAdvancedModSystem : ModSystem
     public override void Dispose()
     {
         configWatcher?.Dispose();
+        clientConfigWatcher?.Dispose();
         base.Dispose();
     }
 }

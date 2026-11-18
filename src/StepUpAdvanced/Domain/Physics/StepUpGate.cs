@@ -17,6 +17,28 @@ namespace StepUpAdvanced.Domain.Physics;
 internal static class StepUpGate
 {
     /// <summary>
+    /// Combines the player's own gate flags with what an enforcing server
+    /// requires. A server can only add restrictions: each effective flag is
+    /// the player's choice OR the server's requirement, and the server side
+    /// counts only while enforcement is in force.
+    /// </summary>
+    /// <remarks>
+    /// Sneak suppression has no server counterpart on purpose. It only
+    /// changes feel, never what a player can reach, so it stays the player's call.
+    /// </remarks>
+    public static GateFlags ResolveFlags(
+        bool sprintOnly,
+        bool disableWhileSneaking,
+        bool disableWhileAirborne,
+        bool enforced,
+        bool serverRequireSprintOnly,
+        bool serverRequireNoAirborne)
+        => new(
+            SprintOnly: sprintOnly || (enforced && serverRequireSprintOnly),
+            DisableWhileSneaking: disableWhileSneaking,
+            DisableWhileAirborne: disableWhileAirborne || (enforced && serverRequireNoAirborne));
+
+    /// <summary>
     /// Returns <c>true</c> when the mod's enhanced step height should apply
     /// this tick, or <c>false</c> when the height path should fall back to
     /// VS's vanilla baseline.
@@ -62,3 +84,6 @@ internal static class StepUpGate
         return true;
     }
 }
+
+/// <summary>Effective gate flags for one tick, after server requirements are applied.</summary>
+internal readonly record struct GateFlags(bool SprintOnly, bool DisableWhileSneaking, bool DisableWhileAirborne);
